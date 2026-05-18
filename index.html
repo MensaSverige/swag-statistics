@@ -1031,7 +1031,7 @@
 
       function getValidMembers() {
         return DATA.filter(
-          (d) => d.year >= STAT_START_YEAR && d.members != null && !d.cancelled,
+          (d) => d.year >= STAT_START_YEAR && d.members != null,
         ).map((d) => [d.year, d.members]);
       }
 
@@ -1321,7 +1321,7 @@
       // ============================================================
       function renderGrowthChart() {
         const members = DATA.filter(
-          (d) => d.year >= STAT_START_YEAR && d.members != null && !d.cancelled,
+          (d) => d.year >= STAT_START_YEAR && d.members != null,
         );
         const labels = [];
         const growthData = [];
