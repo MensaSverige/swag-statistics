@@ -26,6 +26,8 @@
      - Inställda år exkluderas automatiskt från trendberäkningar.
 
   SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
+  "Senast uppdaterad" i footern beräknas automatiskt från senaste året med komplett data.
+  Slider min/max på kartan beräknas automatiskt från DATA.
   ============================================================
 -->
 <!doctype html>
@@ -327,79 +329,55 @@
         <div class="info-text">
           <h3>Om Mensa</h3>
           <p>
-            Mensa är världens största och äldsta förening för personer med hög
-            IQ, grundad 1946 i Oxford av Roland Berrill och Lancelot Ware. Enda
+            <a href="https://www.mensa.org" target="_blank">Mensa</a> är
+            världens största och äldsta förening för personer med hög IQ,
+            grundad 1946 i Oxford av Roland Berrill och Lancelot Ware. Enda
             kravet för medlemskap är ett resultat på eller över 98:e percentilen
             på ett standardiserat intelligenstest. Idag finns Mensa i över 50
             länder med mer än 145 000 medlemmar.
           </p>
           <p style="margin-top: 0.5rem">
-            <strong>Mensa Sverige</strong> grundades 1964 och är en av de större
-            nationella föreningarna. Föreningen arrangerar lokala träffar,
-            föreläsningar, specialintressegrupper (SIG:ar) och den årliga
-            riksträffen – <strong>Mensa SWAG</strong> (Swedish Annual
-            Gathering).
+            <strong
+              ><a href="https://mensa.se" target="_blank"
+                >Mensa Sverige</a
+              ></strong
+            >
+            grundades 1964 och är en av de större nationella föreningarna.
+            Föreningen arrangerar lokala träffar, föreläsningar,
+            specialintressegrupper (SIG:ar) och den årliga riksträffen –
+            <strong>Mensa SWAG</strong> (Swedish Annual Gathering).
           </p>
         </div>
         <div class="info-text">
           <h3>Mensapriset &amp; Media</h3>
           <p>
-            <strong>Mensapriset</strong> delas ut av Mensa Sverige och
-            uppmärksammar personer som bidragit till att sprida kunskap om
-            intelligens, begåvning eller gjort vetenskaplig kommunikation mer
-            tillgänglig. Priset delas traditionellt ut vid årsträffen.
+            <strong
+              ><a href="https://mensa.se/om-mensa/mensapriset/" target="_blank"
+                >Mensapriset</a
+              ></strong
+            >
+            delas ut av Mensa Sverige och uppmärksammar personer som bidragit
+            till att sprida kunskap om intelligens, begåvning eller gjort
+            vetenskaplig kommunikation mer tillgänglig. Priset delas
+            traditionellt ut vid årsträffen.
           </p>
           <p style="margin-top: 0.5rem">
             Mensa Sverige uppmärksammas regelbundet i media vid årsträffarna.
-            SWAG 2017 i Eskilstuna blev internationella nyheter när festen på
-            Elite Hotel spårade ur – polisen tillkallades kl 06 på morgonen.
-            Ironiskt nog ledde det till rekordmånga nya medlemsansökningar.
+            SWAG 2017 i Eskilstuna blev
+            <a
+              href="https://www.thelocal.com/20170601/mensa-in-sweden-sees-membership-application-boost-after-hotel-booze-up-party/"
+              target="_blank"
+              >internationella nyheter</a
+            >
+            när festen på Elite Hotel spårade ur – polisen tillkallades kl 06 på
+            morgonen. Ironiskt nog ledde det till rekordmånga nya
+            medlemsansökningar.
           </p>
         </div>
       </div>
 
-      <!-- Mensapristagare -->
-      <div class="section">
-        <h2>Mensapristagare</h2>
-        <p
-          style="margin-bottom: 0.8rem; font-size: 0.9rem; color: var(--muted)"
-        >
-          Mensapriset instiftades 1996 i samband med Mensas 50-årsjubileum.
-          <a href="https://mensa.se/om-mensa/mensapriset/" target="_blank"
-            >Läs mer på mensa.se →</a
-          >
-        </p>
-        <ul class="prize-list">
-          <li>
-            <strong>2026</strong> – Patrik Norqvist (fysiklektorn &amp;
-            TV-profil)
-          </li>
-          <li><strong>2025</strong> – Victoria Dyring</li>
-          <li><strong>2024</strong> – UR-redaktionen</li>
-          <li><strong>2023</strong> – Fredrik Löfgren</li>
-          <li><strong>2022</strong> – Anders och Måns</li>
-          <li><strong>2021</strong> – Ulla Öberg</li>
-          <li><strong>2020</strong> – Anna Tebelius Bodin</li>
-          <li><strong>2019</strong> – Dr. Mouna Esmaeilzadeh</li>
-          <li><strong>2018</strong> – Anders Hansen</li>
-          <li><strong>2017</strong> – Micael Dahlén</li>
-          <li><strong>2016</strong> – Katarina Gospic</li>
-          <li><strong>2015</strong> – Ronnie Gardiner</li>
-          <li><strong>2014</strong> – KomTek</li>
-          <li><strong>2013</strong> – Anita Kullander</li>
-          <li><strong>2003</strong> – Aronsson Datateknik</li>
-          <li><strong>2002</strong> – Fredrik Lindström</li>
-          <li><strong>2001</strong> – Staffan Westerberg</li>
-          <li><strong>2000</strong> – Jan Axelsson</li>
-          <li>
-            <strong>1999</strong> – Joachim Berner, Anders Gerdin, Mats Svegfors
-            &amp; Staffan Thorsell
-          </li>
-          <li><strong>1998</strong> – Hjärnkontoret</li>
-          <li><strong>1997</strong> – Astrid Lindgren</li>
-          <li><strong>1996</strong> – Metro</li>
-        </ul>
-      </div>
+      <!-- Fun facts -->
+      <div class="fun-facts" id="funFacts"></div>
 
       <!-- Medlemsutveckling -->
       <div class="section">
@@ -408,6 +386,15 @@
           <canvas id="membersChart"></canvas>
         </div>
         <div class="trend-box" id="membersTrend"></div>
+      </div>
+
+      <!-- Tillväxttakt -->
+      <div class="section">
+        <h2>Tillväxttakt (% förändring medlemmar per år)</h2>
+        <div class="chart-container chart-medium">
+          <canvas id="growthChart"></canvas>
+        </div>
+        <div class="highlight-box" id="growthNote"></div>
       </div>
 
       <!-- Deltagare + Procent -->
@@ -499,8 +486,71 @@
         <div id="map"></div>
       </div>
 
-      <!-- Fun facts -->
-      <div class="fun-facts" id="funFacts"></div>
+      <!-- Mensapristagare -->
+      <div class="section">
+        <h2>Mensapristagare</h2>
+        <p
+          style="margin-bottom: 0.8rem; font-size: 0.9rem; color: var(--muted)"
+        >
+          Mensapriset instiftades 1996 i samband med Mensas 50-årsjubileum.
+          <a href="https://mensa.se/om-mensa/mensapriset/" target="_blank"
+            >Läs mer på mensa.se →</a
+          >
+        </p>
+        <ul class="prize-list">
+          <li>
+            <strong>2026</strong> – Patrik Norqvist (fysiklektorn &amp;
+            TV-profil)
+          </li>
+          <li><strong>2025</strong> – Victoria Dyring</li>
+          <li><strong>2024</strong> – UR-redaktionen</li>
+          <li><strong>2023</strong> – Fredrik Löfgren</li>
+          <li><strong>2022</strong> – Anders och Måns</li>
+          <li><strong>2021</strong> – Ulla Öberg</li>
+          <li><strong>2020</strong> – Anna Tebelius Bodin</li>
+          <li><strong>2019</strong> – Dr. Mouna Esmaeilzadeh</li>
+          <li><strong>2018</strong> – Anders Hansen</li>
+          <li><strong>2017</strong> – Micael Dahlén</li>
+          <li><strong>2016</strong> – Katarina Gospic</li>
+          <li><strong>2015</strong> – Ronnie Gardiner</li>
+          <li><strong>2014</strong> – KomTek</li>
+          <li><strong>2013</strong> – Anita Kullander</li>
+          <li><strong>2003</strong> – Aronsson Datateknik</li>
+          <li><strong>2002</strong> – Fredrik Lindström</li>
+          <li><strong>2001</strong> – Staffan Westerberg</li>
+          <li><strong>2000</strong> – Jan Axelsson</li>
+          <li>
+            <strong>1999</strong> – Joachim Berner, Anders Gerdin, Mats Svegfors
+            &amp; Staffan Thorsell
+          </li>
+          <li><strong>1998</strong> – Hjärnkontoret</li>
+          <li><strong>1997</strong> – Astrid Lindgren</li>
+          <li><strong>1996</strong> – Metro</li>
+        </ul>
+      </div>
+
+      <!-- Om datan -->
+      <div class="info-text">
+        <h3>Om datan</h3>
+        <p>
+          <strong>Medlemmar</strong> = antal betalande medlemmar i Mensa
+          Sverige. Källa: Mensa Legatus #2 (föreningens medlemstidning) varje
+          år. Negativ tillväxt innebär att fler lämnat/inte förnyat än som
+          tillkommit.
+        </p>
+        <p style="margin-top: 0.4rem">
+          <strong>Deltagare</strong> = anmälda, betalda deltagare på Mensa SWAG.
+          Inkluderar medföljande och internationella Mensa-medlemmar. Vissa
+          registreras på plats. Källa: Eventgruppen i Mensa Sverige (internt
+          dokument – denna sida gör datan tillgänglig för alla).
+        </p>
+        <p style="margin-top: 0.4rem">
+          <em
+            >Saknas data? Hör av dig om du har historiska siffror (t.ex.
+            Stockholm 1999).</em
+          >
+        </p>
+      </div>
 
       <!-- Tabell -->
       <div class="section">
@@ -529,11 +579,13 @@
 
     <footer>
       <p>
-        Data: Mensa Sverige | Byggd för
-        <a href="https://pages.github.com/">GitHub Pages</a> – ingen build
-        krävs.
+        Data: <a href="https://mensa.se" target="_blank">Mensa Sverige</a> |
+        Byggd för <a href="https://pages.github.com/">GitHub Pages</a> – ingen
+        build krävs.
       </p>
-      <p style="margin-top: 0.3rem">Senast uppdaterad: 2026</p>
+      <p style="margin-top: 0.3rem">
+        Senast uppdaterad: <span id="lastUpdatedYear"></span>
+      </p>
     </footer>
     <script>
       // ============================================================
@@ -673,7 +725,7 @@
           members: 573,
           attendees: null,
           location: "Stockholm",
-          comment: null,
+          comment: "Deltagarantal saknas",
         },
         {
           year: 2000,
@@ -1262,6 +1314,57 @@
       }
 
       // ============================================================
+      // TILLVÄXTTAKT
+      // ============================================================
+      function renderGrowthChart() {
+        const members = DATA.filter(
+          (d) => d.year >= STAT_START_YEAR && d.members != null && !d.cancelled,
+        );
+        const labels = [];
+        const growthData = [];
+        for (let i = 1; i < members.length; i++) {
+          const prev = members[i - 1].members;
+          const curr = members[i].members;
+          if (prev > 0) {
+            labels.push(members[i].year);
+            growthData.push((((curr - prev) / prev) * 100).toFixed(1));
+          }
+        }
+
+        const colors = growthData.map((v) =>
+          parseFloat(v) >= 0 ? "rgba(46,125,50,0.7)" : "rgba(198,40,40,0.7)",
+        );
+
+        new Chart(document.getElementById("growthChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Tillväxt %",
+                data: growthData,
+                backgroundColor: colors,
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { title: { display: true, text: "%" } }, x: {} },
+          },
+        });
+
+        const positive = growthData.filter((v) => parseFloat(v) > 0).length;
+        const negative = growthData.filter((v) => parseFloat(v) < 0).length;
+        const maxGrowth = Math.max(...growthData.map((v) => parseFloat(v)));
+        const maxYear = labels[growthData.indexOf(maxGrowth.toFixed(1))];
+        document.getElementById("growthNote").innerHTML =
+          `${positive} år med tillväxt, ${negative} år med minskning. Högsta tillväxt: <strong>${maxGrowth.toFixed(1)}%</strong> (${maxYear}). Negativ tillväxt = fler som lämnar än som går med.`;
+      }
+
+      // ============================================================
       // TOP 5 & SENASTE 5
       // ============================================================
       function renderTop5() {
@@ -1490,6 +1593,19 @@
         const displayMax = document.getElementById("mapYearMax");
         const mapInfo = document.getElementById("mapInfo");
 
+        // Dynamiskt min/max från DATA
+        const yearsWithLoc = DATA.filter((d) => d.location).map((d) => d.year);
+        const dataMin = Math.min(...yearsWithLoc);
+        const dataMax = Math.max(...yearsWithLoc);
+        sliderMin.min = dataMin;
+        sliderMin.max = dataMax;
+        sliderMin.value = dataMin;
+        sliderMax.min = dataMin;
+        sliderMax.max = dataMax;
+        sliderMax.value = dataMax;
+        displayMin.textContent = dataMin;
+        displayMax.textContent = dataMax;
+
         function update() {
           let minY = parseInt(sliderMin.value);
           let maxY = parseInt(sliderMax.value);
@@ -1588,6 +1704,7 @@
       renderMembersChart();
       renderAttendeesChart();
       renderPercentChart();
+      renderGrowthChart();
       renderTop5();
       renderRecent5();
       renderForecast();
@@ -1595,6 +1712,14 @@
       setupMapSliders();
       renderFunFacts();
       renderTable();
+
+      // Dynamiskt footer-år (senaste året med komplett data)
+      const lastDataYear = DATA.filter(
+        (d) => d.members != null && d.attendees != null && !d.cancelled,
+      ).slice(-1)[0];
+      document.getElementById("lastUpdatedYear").textContent = lastDataYear
+        ? lastDataYear.year
+        : new Date().getFullYear();
     </script>
   </body>
 </html>
