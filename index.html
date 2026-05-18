@@ -1,3 +1,33 @@
+<!--
+  ============================================================
+  MENSA SVERIGE – SWAG-STATISTIK
+  ============================================================
+
+  HUR MAN UPPDATERAR:
+
+  1. ÅRSTRÄFF-STATISTIK (medlemmar & deltagare)
+     - Medlemsantal hämtas från Mensa Legatus #2 varje år.
+     - Deltagarantal fylls i efter genomförd SWAG.
+     - Sök efter "const DATA = [" nedan och lägg till/uppdatera raden
+       för aktuellt år:
+         { year: 2028, members: XXXX, attendees: XXX, location: "Stad", comment: null },
+     - Om en ny ort tillkommer, lägg även till koordinater i COORDS-objektet:
+         "Stad": [latitud, longitud],
+
+  2. MENSAPRISTAGARE
+     - Sök efter '<ul class="prize-list">' i HTML-delen.
+     - Lägg till en ny rad överst i listan:
+         <li><strong>YYYY</strong> – Pristagarens namn</li>
+     - Fullständig lista finns på: https://mensa.se/om-mensa/mensapriset/
+
+  3. INSTÄLLD ÅRSTRÄFF
+     - Lägg till raden med cancelled: true:
+         { year: YYYY, members: XXXX, attendees: 0, location: null, comment: "INSTÄLLT (anledning)", cancelled: true },
+     - Inställda år exkluderas automatiskt från trendberäkningar.
+
+  SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
+  ============================================================
+-->
 <!doctype html>
 <html lang="sv">
   <head>
