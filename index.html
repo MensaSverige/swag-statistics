@@ -164,7 +164,7 @@
         height: 220px;
       }
       #map {
-        height: 500px;
+        height: 700px;
         border-radius: 8px;
         margin-top: 0.5rem;
       }
@@ -812,7 +812,8 @@
           members: 3792,
           attendees: 120,
           location: "Siljansnäs",
-          comment: null,
+          comment:
+            "Anses av många som en av de bästa – gemytligt och alla kunde vara med på allt",
         },
         {
           year: 2012,
@@ -833,7 +834,7 @@
           members: 5013,
           attendees: 300,
           location: "Örebro",
-          comment: null,
+          comment: "Rum 107 föddes – festkonceptet som lever vidare",
         },
         {
           year: 2015,
@@ -862,7 +863,8 @@
           members: 7013,
           attendees: 550,
           location: "Linköping",
-          comment: null,
+          comment:
+            "Första året över 500 deltagare – möjligen Eskilstuna-effekten",
         },
         {
           year: 2019,
@@ -1561,7 +1563,7 @@
           locCount[d.location] = locCount[d.location] || 0;
           const visitNum = locCount[d.location];
           locCount[d.location]++;
-          const offset = visitNum * 0.04;
+          const offset = visitNum * 0.02;
 
           const pos = [lat + offset, lng + offset];
           coords.push(pos);
@@ -1586,6 +1588,11 @@
             weight: 1.5,
             dashArray: "4 4",
           }).addTo(mapInstance);
+        }
+
+        // Auto-zoom till att passa alla punkter med marginal
+        if (coords.length > 0) {
+          mapInstance.fitBounds(coords, { padding: [30, 30] });
         }
       }
 
@@ -1671,8 +1678,10 @@
           `${totalAttendees.toLocaleString("sv-SE")} totala SWAG-deltagare genom \u00e5ren`,
           `${uniqueLocations} unika platser`,
           `+${memberGrowth.toLocaleString("sv-SE")} medlemmar sedan starten`,
+          `Rum 107 föddes i Örebro 2014`,
           `SWAG 2017: Polisen kallades till festen`,
-          `F\u00f6rsta SWAG: 4 deltagare (1995)`,
+          `Siljansnäs 2011: Mångas favorit`,
+          `Första SWAG: 4 deltagare (1995)`,
         ];
 
         document.getElementById("funFacts").innerHTML = facts
