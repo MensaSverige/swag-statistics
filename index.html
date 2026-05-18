@@ -1,644 +1,1570 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mensa Sverige – SWAG-statistik</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root {
-            --primary: #1a237e;
-            --primary-light: #3949ab;
-            --accent: #ffc107;
-            --accent2: #ff5722;
-            --bg: #fafafa;
-            --card: #ffffff;
-            --text: #212121;
-            --muted: #757575;
-            --success: #2e7d32;
-            --warning: #f57c00;
-            --cancelled: #c62828;
+      :root {
+        --primary: #1a237e;
+        --primary-light: #3949ab;
+        --accent: #ffc107;
+        --accent2: #ff5722;
+        --bg: #fafafa;
+        --card: #ffffff;
+        --text: #212121;
+        --muted: #757575;
+        --success: #2e7d32;
+        --warning: #f57c00;
+        --cancelled: #c62828;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      header {
+        background: linear-gradient(
+          135deg,
+          var(--primary) 0%,
+          var(--primary-light) 100%
+        );
+        color: white;
+        padding: 3rem 1rem 2rem;
+        text-align: center;
+      }
+      header h1 {
+        font-size: 2.4rem;
+        margin-bottom: 0.3rem;
+        letter-spacing: -0.5px;
+      }
+      header p {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .container {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      .stat-card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1.2rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s;
+        border-top: 3px solid var(--primary);
+      }
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      }
+      .stat-card .value {
+        font-size: 1.9rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .stat-card .label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-top: 0.2rem;
+      }
+      .stat-card.accent {
+        border-top-color: var(--accent);
+      }
+      .stat-card.accent .value {
+        color: var(--accent2);
+      }
+      .section {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      .section h2 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        color: var(--primary);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 0.4rem;
+        display: inline-block;
+      }
+      .chart-container {
+        position: relative;
+        width: 100%;
+      }
+      .chart-tall {
+        height: 350px;
+      }
+      .chart-medium {
+        height: 280px;
+      }
+      .chart-small {
+        height: 220px;
+      }
+      #map {
+        height: 500px;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+      }
+      .info-text {
+        background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .info-text h3 {
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+      }
+      .info-text p {
+        font-size: 0.95rem;
+        color: #333;
+      }
+      .highlight-box {
+        background: #fff8e1;
+        border-left: 4px solid var(--accent);
+        padding: 1rem 1.2rem;
+        border-radius: 0 8px 8px 0;
+        margin: 1rem 0;
+        font-size: 0.9rem;
+      }
+      .cancelled-box {
+        background: #ffebee;
+        border-left: 4px solid var(--cancelled);
+        padding: 0.8rem 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.9rem;
+        margin: 1rem 0;
+      }
+      .trend-box {
+        background: #e8f5e9;
+        border-left: 4px solid var(--success);
+        padding: 0.8rem 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.9rem;
+        margin: 1rem 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+      }
+      th,
+      td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      th {
+        background: var(--primary);
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        font-weight: 500;
+      }
+      tr:hover {
+        background: #f0f4ff;
+      }
+      tr.cancelled {
+        background: #ffebee;
+        color: var(--cancelled);
+      }
+      .table-wrapper {
+        max-height: 450px;
+        overflow-y: auto;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+      }
+      .prize-list {
+        columns: 2;
+        column-gap: 2rem;
+        list-style: none;
+        padding: 0;
+      }
+      .prize-list li {
+        margin-bottom: 0.4rem;
+        font-size: 0.9rem;
+        break-inside: avoid;
+        padding: 0.2rem 0;
+      }
+      .prize-list li strong {
+        color: var(--primary);
+      }
+      .fun-fact {
+        display: inline-block;
+        background: var(--primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin: 0.3rem;
+      }
+      .fun-facts {
+        margin: 1rem 0;
+        text-align: center;
+      }
+      .slider-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 0.5rem 0 1rem;
+        flex-wrap: wrap;
+      }
+      .slider-container input[type="range"] {
+        flex: 1;
+        min-width: 200px;
+      }
+      .slider-container label {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .slider-container .year-display {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1.1rem;
+        min-width: 90px;
+      }
+      footer {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      footer a {
+        color: var(--primary-light);
+      }
+      @media (max-width: 900px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-        header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; padding: 3rem 1rem 2rem; text-align: center; }
-        header h1 { font-size: 2.4rem; margin-bottom: 0.3rem; letter-spacing: -0.5px; }
-        header p { color: rgba(255,255,255,0.85); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
-        .container { max-width: 1300px; margin: 0 auto; padding: 2rem 1rem; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { background: var(--card); border-radius: 12px; padding: 1.2rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s; border-top: 3px solid var(--primary); }
-        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
-        .stat-card .value { font-size: 1.9rem; font-weight: 700; color: var(--primary); }
-        .stat-card .label { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
-        .stat-card.accent { border-top-color: var(--accent); }
-        .stat-card.accent .value { color: var(--accent2); }
-        .section { background: var(--card); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .section h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 0.4rem; display: inline-block; }
-        .chart-container { position: relative; width: 100%; }
-        .chart-tall { height: 350px; }
-        .chart-medium { height: 280px; }
-        .chart-small { height: 220px; }
-        #map { height: 500px; border-radius: 8px; margin-top: 0.5rem; }
-        .info-text { background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
-        .info-text h3 { color: var(--primary); margin-bottom: 0.5rem; }
-        .info-text p { font-size: 0.95rem; color: #333; }
-        .highlight-box { background: #fff8e1; border-left: 4px solid var(--accent); padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 1rem 0; font-size: 0.9rem; }
-        .cancelled-box { background: #ffebee; border-left: 4px solid var(--cancelled); padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; font-size: 0.9rem; margin: 1rem 0; }
-        .trend-box { background: #e8f5e9; border-left: 4px solid var(--success); padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; font-size: 0.9rem; margin: 1rem 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid #e0e0e0; }
-        th { background: var(--primary); color: white; position: sticky; top: 0; z-index: 1; font-weight: 500; }
-        tr:hover { background: #f0f4ff; }
-        tr.cancelled { background: #ffebee; color: var(--cancelled); }
-        .table-wrapper { max-height: 450px; overflow-y: auto; border-radius: 8px; border: 1px solid #e0e0e0; }
-        .prize-list { columns: 2; column-gap: 2rem; list-style: none; padding: 0; }
-        .prize-list li { margin-bottom: 0.4rem; font-size: 0.9rem; break-inside: avoid; padding: 0.2rem 0; }
-        .prize-list li strong { color: var(--primary); }
-        .fun-fact { display: inline-block; background: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; margin: 0.3rem; }
-        .fun-facts { margin: 1rem 0; text-align: center; }
-        .slider-container { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0 1rem; flex-wrap: wrap; }
-        .slider-container input[type=range] { flex: 1; min-width: 200px; }
-        .slider-container label { font-size: 0.9rem; color: var(--muted); }
-        .slider-container .year-display { font-weight: 700; color: var(--primary); font-size: 1.1rem; min-width: 90px; }
-        footer { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 0.8rem; }
-        footer a { color: var(--primary-light); }
-        @media (max-width: 900px) {
-            .grid-2 { grid-template-columns: 1fr; }
-            header h1 { font-size: 1.6rem; }
-            .stat-card .value { font-size: 1.5rem; }
-            #map { height: 350px; }
-            .prize-list { columns: 1; }
+        header h1 {
+          font-size: 1.6rem;
         }
+        .stat-card .value {
+          font-size: 1.5rem;
+        }
+        #map {
+          height: 350px;
+        }
+        .prize-list {
+          columns: 1;
+        }
+      }
     </style>
-</head>
-<body>
-<header>
-    <h1>Mensa Sverige – SWAG-statistik</h1>
-    <p>Medlemsutveckling, Mensa SWAG-träffar och trender sedan 1995</p>
-</header>
-<div class="container">
+  </head>
+  <body>
+    <header>
+      <h1>Mensa Sverige – SWAG-statistik</h1>
+      <p>Medlemsutveckling, Mensa SWAG-träffar och trender sedan 1995</p>
+    </header>
+    <div class="container">
+      <!-- Nyckeltal -->
+      <div class="stats-grid" id="statsGrid"></div>
 
-<!-- Nyckeltal -->
-<div class="stats-grid" id="statsGrid"></div>
+      <!-- Intro text -->
+      <div class="grid-2">
+        <div class="info-text">
+          <h3>Om Mensa</h3>
+          <p>
+            Mensa är världens största och äldsta förening för personer med hög
+            IQ, grundad 1946 i Oxford av Roland Berrill och Lancelot Ware. Enda
+            kravet för medlemskap är ett resultat på eller över 98:e percentilen
+            på ett standardiserat intelligenstest. Idag finns Mensa i över 50
+            länder med mer än 145 000 medlemmar.
+          </p>
+          <p style="margin-top: 0.5rem">
+            <strong>Mensa Sverige</strong> grundades 1964 och är en av de större
+            nationella föreningarna. Föreningen arrangerar lokala träffar,
+            föreläsningar, specialintressegrupper (SIG:ar) och den årliga
+            riksträffen – <strong>Mensa SWAG</strong> (Swedish Annual
+            Gathering).
+          </p>
+        </div>
+        <div class="info-text">
+          <h3>Mensapriset &amp; Media</h3>
+          <p>
+            <strong>Mensapriset</strong> delas ut av Mensa Sverige och
+            uppmärksammar personer som bidragit till att sprida kunskap om
+            intelligens, begåvning eller gjort vetenskaplig kommunikation mer
+            tillgänglig. Priset delas traditionellt ut vid årsträffen.
+          </p>
+          <p style="margin-top: 0.5rem">
+            Mensa Sverige uppmärksammas regelbundet i media vid årsträffarna.
+            SWAG 2017 i Eskilstuna blev internationella nyheter när festen på
+            Elite Hotel spårade ur – polisen tillkallades kl 06 på morgonen.
+            Ironiskt nog ledde det till rekordmånga nya medlemsansökningar.
+          </p>
+        </div>
+      </div>
 
-<!-- Intro text -->
-<div class="grid-2">
-    <div class="info-text">
-        <h3>Om Mensa</h3>
-        <p>Mensa är världens största och äldsta förening för personer med hög IQ, grundad 1946 i Oxford av Roland Berrill och Lancelot Ware. Enda kravet för medlemskap är ett resultat på eller över 98:e percentilen på ett standardiserat intelligenstest. Idag finns Mensa i över 50 länder med mer än 145 000 medlemmar.</p>
-        <p style="margin-top:0.5rem;"><strong>Mensa Sverige</strong> grundades 1964 och är en av de större nationella föreningarna. Föreningen arrangerar lokala träffar, föreläsningar, specialintressegrupper (SIG:ar) och den årliga riksträffen – <strong>Mensa SWAG</strong> (Swedish Annual Gathering).</p>
-    </div>
-    <div class="info-text">
-        <h3>Mensapriset &amp; Media</h3>
-        <p><strong>Mensapriset</strong> delas ut av Mensa Sverige och uppmärksammar personer som bidragit till att sprida kunskap om intelligens, begåvning eller gjort vetenskaplig kommunikation mer tillgänglig. Priset delas traditionellt ut vid årsträffen.</p>
-        <p style="margin-top:0.5rem;">Mensa Sverige uppmärksammas regelbundet i media vid årsträffarna. SWAG 2017 i Eskilstuna blev internationella nyheter när festen på Elite Hotel spårade ur – polisen tillkallades kl 06 på morgonen. Ironiskt nog ledde det till rekordmånga nya medlemsansökningar.</p>
-    </div>
-</div>
+      <!-- Mensapristagare -->
+      <div class="section">
+        <h2>Mensapristagare</h2>
+        <p
+          style="margin-bottom: 0.8rem; font-size: 0.9rem; color: var(--muted)"
+        >
+          Mensapriset instiftades 1996 i samband med Mensas 50-årsjubileum.
+          <a href="https://mensa.se/om-mensa/mensapriset/" target="_blank"
+            >Läs mer på mensa.se →</a
+          >
+        </p>
+        <ul class="prize-list">
+          <li>
+            <strong>2026</strong> – Patrik Norqvist (fysiklektorn &amp;
+            TV-profil)
+          </li>
+          <li><strong>2025</strong> – Victoria Dyring</li>
+          <li><strong>2024</strong> – UR-redaktionen</li>
+          <li><strong>2023</strong> – Fredrik Löfgren</li>
+          <li><strong>2022</strong> – Anders och Måns</li>
+          <li><strong>2021</strong> – Ulla Öberg</li>
+          <li><strong>2020</strong> – Anna Tebelius Bodin</li>
+          <li><strong>2019</strong> – Dr. Mouna Esmaeilzadeh</li>
+          <li><strong>2018</strong> – Anders Hansen</li>
+          <li><strong>2017</strong> – Micael Dahlén</li>
+          <li><strong>2016</strong> – Katarina Gospic</li>
+          <li><strong>2015</strong> – Ronnie Gardiner</li>
+          <li><strong>2014</strong> – KomTek</li>
+          <li><strong>2013</strong> – Anita Kullander</li>
+          <li><strong>2003</strong> – Aronsson Datateknik</li>
+          <li><strong>2002</strong> – Fredrik Lindström</li>
+          <li><strong>2001</strong> – Staffan Westerberg</li>
+          <li><strong>2000</strong> – Jan Axelsson</li>
+          <li>
+            <strong>1999</strong> – Joachim Berner, Anders Gerdin, Mats Svegfors
+            &amp; Staffan Thorsell
+          </li>
+          <li><strong>1998</strong> – Hjärnkontoret</li>
+          <li><strong>1997</strong> – Astrid Lindgren</li>
+          <li><strong>1996</strong> – Metro</li>
+        </ul>
+      </div>
 
-<!-- Mensapristagare -->
-<div class="section">
-    <h2>Mensapristagare</h2>
-    <p style="margin-bottom:0.8rem; font-size:0.9rem; color:var(--muted);">Mensapriset instiftades 1996 i samband med Mensas 50-årsjubileum. <a href="https://mensa.se/om-mensa/mensapriset/" target="_blank">Läs mer på mensa.se →</a></p>
-    <ul class="prize-list">
-        <li><strong>2026</strong> – Patrik Norqvist (fysiklektorn &amp; TV-profil)</li>
-        <li><strong>2025</strong> – Victoria Dyring</li>
-        <li><strong>2024</strong> – UR-redaktionen</li>
-        <li><strong>2023</strong> – Fredrik Löfgren</li>
-        <li><strong>2022</strong> – Anders och Måns</li>
-        <li><strong>2021</strong> – Ulla Öberg</li>
-        <li><strong>2020</strong> – Anna Tebelius Bodin</li>
-        <li><strong>2019</strong> – Dr. Mouna Esmaeilzadeh</li>
-        <li><strong>2018</strong> – Anders Hansen</li>
-        <li><strong>2017</strong> – Micael Dahlén</li>
-        <li><strong>2016</strong> – Katarina Gospic</li>
-        <li><strong>2015</strong> – Ronnie Gardiner</li>
-        <li><strong>2014</strong> – KomTek</li>
-        <li><strong>2013</strong> – Anita Kullander</li>
-        <li><strong>2003</strong> – Aronsson Datateknik</li>
-        <li><strong>2002</strong> – Fredrik Lindström</li>
-        <li><strong>2001</strong> – Staffan Westerberg</li>
-        <li><strong>2000</strong> – Jan Axelsson</li>
-        <li><strong>1999</strong> – Joachim Berner, Anders Gerdin, Mats Svegfors &amp; Staffan Thorsell</li>
-        <li><strong>1998</strong> – Hjärnkontoret</li>
-        <li><strong>1997</strong> – Astrid Lindgren</li>
-        <li><strong>1996</strong> – Metro</li>
-    </ul>
-</div>
+      <!-- Medlemsutveckling -->
+      <div class="section">
+        <h2>Medlemsutveckling (sedan 1995)</h2>
+        <div class="chart-container chart-tall">
+          <canvas id="membersChart"></canvas>
+        </div>
+        <div class="trend-box" id="membersTrend"></div>
+      </div>
 
-<!-- Medlemsutveckling -->
-<div class="section">
-    <h2>Medlemsutveckling (sedan 1995)</h2>
-    <div class="chart-container chart-tall">
-        <canvas id="membersChart"></canvas>
-    </div>
-    <div class="trend-box" id="membersTrend"></div>
-</div>
-
-<!-- Deltagare + Procent -->
-<div class="grid-2">
-    <div class="section">
-        <h2>Deltagare på Mensa SWAG</h2>
-        <div class="chart-container chart-medium">
+      <!-- Deltagare + Procent -->
+      <div class="grid-2">
+        <div class="section">
+          <h2>Deltagare på Mensa SWAG</h2>
+          <div class="chart-container chart-medium">
             <canvas id="attendeesChart"></canvas>
+          </div>
+          <div class="cancelled-box">
+            ⚠️ 2020 och 2021 inställda pga pandemin – exkluderas från trender.
+          </div>
+          <div class="trend-box" id="attendeesTrend"></div>
         </div>
-        <div class="cancelled-box">⚠️ 2020 och 2021 inställda pga pandemin – exkluderas från trender.</div>
-        <div class="trend-box" id="attendeesTrend"></div>
-    </div>
-    <div class="section">
-        <h2>Deltagarandel (% av medlemmar)</h2>
-        <div class="chart-container chart-medium">
+        <div class="section">
+          <h2>Deltagarandel (% av medlemmar)</h2>
+          <div class="chart-container chart-medium">
             <canvas id="percentChart"></canvas>
+          </div>
+          <div class="highlight-box" id="percentNote"></div>
         </div>
-        <div class="highlight-box" id="percentNote"></div>
-    </div>
-</div>
+      </div>
 
-<!-- Top 5 + Senaste 5 -->
-<div class="grid-2">
-    <div class="section">
-        <h2>Top 5 största Mensa SWAG</h2>
-        <div class="chart-container chart-medium">
+      <!-- Top 5 + Senaste 5 -->
+      <div class="grid-2">
+        <div class="section">
+          <h2>Top 5 största Mensa SWAG</h2>
+          <div class="chart-container chart-medium">
             <canvas id="top5Chart"></canvas>
+          </div>
         </div>
-    </div>
-    <div class="section">
-        <h2>Senaste 5 Mensa SWAG</h2>
-        <div class="chart-container chart-medium">
+        <div class="section">
+          <h2>Senaste 5 Mensa SWAG</h2>
+          <div class="chart-container chart-medium">
             <canvas id="recent5Chart"></canvas>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
 
-<!-- Prognos -->
-<div class="section">
-    <h2 id="forecastTitle">Prognos: Nästa Mensa SWAG</h2>
-    <div class="grid-2">
-        <div class="chart-container chart-small">
+      <!-- Prognos -->
+      <div class="section">
+        <h2 id="forecastTitle">Prognos: Nästa Mensa SWAG</h2>
+        <div class="grid-2">
+          <div class="chart-container chart-small">
             <canvas id="forecastChart"></canvas>
+          </div>
+          <div
+            id="forecastText"
+            style="display: flex; align-items: center"
+          ></div>
         </div>
-        <div id="forecastText" style="display:flex;align-items:center;"></div>
-    </div>
-</div>
+      </div>
 
-<!-- Karta -->
-<div class="section">
-    <h2>Karta – Mensa SWAG genom åren</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.3rem;">Färgerna visar kronologisk ordning: blått (tidigt) → orange/rött (nyligen). Klicka för detaljer.</p>
-    <div class="slider-container">
-        <label>Visa från:</label>
-        <input type="range" id="mapSliderMin" min="1995" max="2027" value="1995" step="1">
-        <label>till:</label>
-        <input type="range" id="mapSliderMax" min="1995" max="2027" value="2027" step="1">
-        <span class="year-display" id="mapYearDisplay">1995–2027</span>
-    </div>
-    <div id="map"></div>
-</div>
+      <!-- Karta -->
+      <div class="section">
+        <h2>Karta – Mensa SWAG genom åren</h2>
+        <p
+          style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.3rem"
+        >
+          Färgerna visar kronologisk ordning: blått (tidigt) → orange/rött
+          (nyligen). Klicka för detaljer.
+        </p>
+        <div class="slider-container">
+          <label>Visa från:</label>
+          <span class="year-display" id="mapYearMin">1995</span>
+          <input
+            type="range"
+            id="mapSliderMin"
+            min="1995"
+            max="2027"
+            value="1995"
+            step="1"
+          />
+          <label>till:</label>
+          <span class="year-display" id="mapYearMax">2027</span>
+          <input
+            type="range"
+            id="mapSliderMax"
+            min="1995"
+            max="2027"
+            value="2027"
+            step="1"
+          />
+        </div>
+        <p
+          style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
+          id="mapInfo"
+        ></p>
+        <div id="map"></div>
+      </div>
 
-<!-- Fun facts -->
-<div class="fun-facts" id="funFacts"></div>
+      <!-- Fun facts -->
+      <div class="fun-facts" id="funFacts"></div>
 
-<!-- Tabell -->
-<div class="section">
-    <h2>All data (1981–2027)</h2>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.5rem;">Lägg till nya år i <code>DATA</code>-arrayen i källkoden.</p>
-    <div class="table-wrapper">
-        <table id="dataTable">
-            <thead><tr><th>År</th><th>Medlemmar</th><th>Deltagare</th><th>Plats</th><th>Kommentar</th></tr></thead>
+      <!-- Tabell -->
+      <div class="section">
+        <h2>All data (1981–2027)</h2>
+        <p
+          style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
+        >
+          Lägg till nya år i <code>DATA</code>-arrayen i källkoden.
+        </p>
+        <div class="table-wrapper">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th>År</th>
+                <th>Medlemmar</th>
+                <th>Deltagare</th>
+                <th>Plats</th>
+                <th>Kommentar</th>
+              </tr>
+            </thead>
             <tbody></tbody>
-        </table>
+          </table>
+        </div>
+      </div>
     </div>
-</div>
-</div>
 
-<footer>
-    <p>Data: Mensa Sverige | Byggd för <a href="https://pages.github.com/">GitHub Pages</a> – ingen build krävs.</p>
-    <p style="margin-top:0.3rem;">Senast uppdaterad: 2026</p>
-</footer>
-<script>
-// ============================================================
-// DATA – Lägg till nya rader för att uppdatera sidan.
-// Format: { year, members, attendees, location, comment, cancelled }
-// cancelled: true = exkluderas från trendberäkningar
-// ============================================================
-const DATA = [
-    { year: 1981, members: 49, attendees: null, location: null, comment: "Norge & Sverige" },
-    { year: 1982, members: null, attendees: null, location: null, comment: "Norge & Sverige" },
-    { year: 1983, members: 32, attendees: null, location: null, comment: "Norge & Sverige" },
-    { year: 1984, members: 39, attendees: null, location: null, comment: null },
-    { year: 1985, members: 42, attendees: null, location: null, comment: "Norge & Sverige" },
-    { year: 1986, members: null, attendees: null, location: null, comment: null },
-    { year: 1987, members: null, attendees: null, location: null, comment: null },
-    { year: 1988, members: null, attendees: null, location: null, comment: null },
-    { year: 1989, members: null, attendees: null, location: null, comment: null },
-    { year: 1990, members: 130, attendees: null, location: null, comment: null },
-    { year: 1991, members: 146, attendees: null, location: null, comment: null },
-    { year: 1992, members: 254, attendees: null, location: null, comment: null },
-    { year: 1993, members: 205, attendees: null, location: null, comment: null },
-    { year: 1994, members: 195, attendees: null, location: null, comment: null },
-    { year: 1995, members: 188, attendees: 4, location: "Lohärad-Råby", comment: null },
-    { year: 1996, members: 217, attendees: 11, location: "Göteborg", comment: null },
-    { year: 1997, members: 397, attendees: 20, location: "Lidköping", comment: null },
-    { year: 1998, members: 501, attendees: 25, location: "Storön, Vänern, Gullspång", comment: null },
-    { year: 1999, members: 573, attendees: null, location: "Stockholm", comment: null },
-    { year: 2000, members: 727, attendees: 50, location: "Malmö", comment: null },
-    { year: 2001, members: 651, attendees: 25, location: "Trollhättan", comment: null },
-    { year: 2002, members: 770, attendees: 54, location: "Linköping", comment: null },
-    { year: 2003, members: 1001, attendees: 27, location: "Helsingborg", comment: null },
-    { year: 2004, members: 1370, attendees: 110, location: "Stockholm", comment: null },
-    { year: 2005, members: 1841, attendees: 130, location: "Göteborg", comment: null },
-    { year: 2006, members: 1606, attendees: 80, location: "Falun", comment: null },
-    { year: 2007, members: 1997, attendees: 102, location: "Växjö", comment: null },
-    { year: 2008, members: 2411, attendees: 86, location: "Lund", comment: null },
-    { year: 2009, members: 2550, attendees: 120, location: "Stockholm", comment: null },
-    { year: 2010, members: 3020, attendees: 110, location: "Norrköping", comment: null },
-    { year: 2011, members: 3792, attendees: 120, location: "Siljansnäs", comment: null },
-    { year: 2012, members: 4239, attendees: 180, location: "Malmö", comment: null },
-    { year: 2013, members: 4638, attendees: 208, location: "Jönköping", comment: null },
-    { year: 2014, members: 5013, attendees: 300, location: "Örebro", comment: null },
-    { year: 2015, members: 5165, attendees: 230, location: "Kosta", comment: null },
-    { year: 2016, members: 5639, attendees: 476, location: "Göteborg", comment: null },
-    { year: 2017, members: 6454, attendees: 420, location: "Eskilstuna", comment: "Internationella nyheter - polisen tillkallades till Elite Hotel" },
-    { year: 2018, members: 7013, attendees: 550, location: "Linköping", comment: null },
-    { year: 2019, members: 7242, attendees: 553, location: "Uppsala", comment: null },
-    { year: 2020, members: 7309, attendees: 0, location: null, comment: "INSTÄLLT (covid-19)", cancelled: true },
-    { year: 2021, members: 7225, attendees: 0, location: null, comment: "INSTÄLLT (covid-19)", cancelled: true },
-    { year: 2022, members: 7093, attendees: 460, location: "Sundsvall", comment: null },
-    { year: 2023, members: 7442, attendees: 678, location: "Malmö", comment: null },
-    { year: 2024, members: 7830, attendees: 739, location: "Örebro", comment: null },
-    { year: 2025, members: 8013, attendees: 606, location: "Visby", comment: null },
-    { year: 2026, members: 8766, attendees: 711, location: "Jönköping", comment: null },
-    { year: 2027, members: null, attendees: null, location: "Borås", comment: null },
-];
+    <footer>
+      <p>
+        Data: Mensa Sverige | Byggd för
+        <a href="https://pages.github.com/">GitHub Pages</a> – ingen build
+        krävs.
+      </p>
+      <p style="margin-top: 0.3rem">Senast uppdaterad: 2026</p>
+    </footer>
+    <script>
+      // ============================================================
+      // DATA – Lägg till nya rader för att uppdatera sidan.
+      // Format: { year, members, attendees, location, comment, cancelled }
+      // cancelled: true = exkluderas från trendberäkningar
+      // ============================================================
+      const DATA = [
+        {
+          year: 1981,
+          members: 49,
+          attendees: null,
+          location: null,
+          comment: "Norge & Sverige",
+        },
+        {
+          year: 1982,
+          members: null,
+          attendees: null,
+          location: null,
+          comment: "Norge & Sverige",
+        },
+        {
+          year: 1983,
+          members: 32,
+          attendees: null,
+          location: null,
+          comment: "Norge & Sverige",
+        },
+        {
+          year: 1984,
+          members: 39,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1985,
+          members: 42,
+          attendees: null,
+          location: null,
+          comment: "Norge & Sverige",
+        },
+        {
+          year: 1986,
+          members: null,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1987,
+          members: null,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1988,
+          members: null,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1989,
+          members: null,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1990,
+          members: 130,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1991,
+          members: 146,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1992,
+          members: 254,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1993,
+          members: 205,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1994,
+          members: 195,
+          attendees: null,
+          location: null,
+          comment: null,
+        },
+        {
+          year: 1995,
+          members: 188,
+          attendees: 4,
+          location: "Lohärad-Råby",
+          comment: null,
+        },
+        {
+          year: 1996,
+          members: 217,
+          attendees: 11,
+          location: "Göteborg",
+          comment: null,
+        },
+        {
+          year: 1997,
+          members: 397,
+          attendees: 20,
+          location: "Lidköping",
+          comment: null,
+        },
+        {
+          year: 1998,
+          members: 501,
+          attendees: 25,
+          location: "Storön, Vänern, Gullspång",
+          comment: null,
+        },
+        {
+          year: 1999,
+          members: 573,
+          attendees: null,
+          location: "Stockholm",
+          comment: null,
+        },
+        {
+          year: 2000,
+          members: 727,
+          attendees: 50,
+          location: "Malmö",
+          comment: null,
+        },
+        {
+          year: 2001,
+          members: 651,
+          attendees: 25,
+          location: "Trollhättan",
+          comment: null,
+        },
+        {
+          year: 2002,
+          members: 770,
+          attendees: 54,
+          location: "Linköping",
+          comment: null,
+        },
+        {
+          year: 2003,
+          members: 1001,
+          attendees: 27,
+          location: "Helsingborg",
+          comment: null,
+        },
+        {
+          year: 2004,
+          members: 1370,
+          attendees: 110,
+          location: "Stockholm",
+          comment: null,
+        },
+        {
+          year: 2005,
+          members: 1841,
+          attendees: 130,
+          location: "Göteborg",
+          comment: null,
+        },
+        {
+          year: 2006,
+          members: 1606,
+          attendees: 80,
+          location: "Falun",
+          comment: null,
+        },
+        {
+          year: 2007,
+          members: 1997,
+          attendees: 102,
+          location: "Växjö",
+          comment: null,
+        },
+        {
+          year: 2008,
+          members: 2411,
+          attendees: 86,
+          location: "Lund",
+          comment: null,
+        },
+        {
+          year: 2009,
+          members: 2550,
+          attendees: 120,
+          location: "Stockholm",
+          comment: null,
+        },
+        {
+          year: 2010,
+          members: 3020,
+          attendees: 110,
+          location: "Norrköping",
+          comment: null,
+        },
+        {
+          year: 2011,
+          members: 3792,
+          attendees: 120,
+          location: "Siljansnäs",
+          comment: null,
+        },
+        {
+          year: 2012,
+          members: 4239,
+          attendees: 180,
+          location: "Malmö",
+          comment: null,
+        },
+        {
+          year: 2013,
+          members: 4638,
+          attendees: 208,
+          location: "Jönköping",
+          comment: null,
+        },
+        {
+          year: 2014,
+          members: 5013,
+          attendees: 300,
+          location: "Örebro",
+          comment: null,
+        },
+        {
+          year: 2015,
+          members: 5165,
+          attendees: 230,
+          location: "Kosta",
+          comment: null,
+        },
+        {
+          year: 2016,
+          members: 5639,
+          attendees: 476,
+          location: "Göteborg",
+          comment: null,
+        },
+        {
+          year: 2017,
+          members: 6454,
+          attendees: 420,
+          location: "Eskilstuna",
+          comment:
+            "Internationella nyheter - polisen tillkallades till Elite Hotel",
+        },
+        {
+          year: 2018,
+          members: 7013,
+          attendees: 550,
+          location: "Linköping",
+          comment: null,
+        },
+        {
+          year: 2019,
+          members: 7242,
+          attendees: 553,
+          location: "Uppsala",
+          comment: null,
+        },
+        {
+          year: 2020,
+          members: 7309,
+          attendees: 0,
+          location: null,
+          comment: "INSTÄLLT (covid-19)",
+          cancelled: true,
+        },
+        {
+          year: 2021,
+          members: 7225,
+          attendees: 0,
+          location: null,
+          comment: "INSTÄLLT (covid-19)",
+          cancelled: true,
+        },
+        {
+          year: 2022,
+          members: 7093,
+          attendees: 460,
+          location: "Sundsvall",
+          comment: null,
+        },
+        {
+          year: 2023,
+          members: 7442,
+          attendees: 678,
+          location: "Malmö",
+          comment: null,
+        },
+        {
+          year: 2024,
+          members: 7830,
+          attendees: 739,
+          location: "Örebro",
+          comment: null,
+        },
+        {
+          year: 2025,
+          members: 8013,
+          attendees: 606,
+          location: "Visby",
+          comment: null,
+        },
+        {
+          year: 2026,
+          members: 8766,
+          attendees: 711,
+          location: "Jönköping",
+          comment: null,
+        },
+        {
+          year: 2027,
+          members: null,
+          attendees: null,
+          location: "Borås",
+          comment: null,
+        },
+      ];
 
-const COORDS = {
-    "Lohärad-Råby": [59.72, 18.55],
-    "Göteborg": [57.7089, 11.9746],
-    "Lidköping": [58.5052, 13.1579],
-    "Storön, Vänern, Gullspång": [58.98, 14.10],
-    "Stockholm": [59.3293, 18.0686],
-    "Malmö": [55.6050, 13.0038],
-    "Trollhättan": [58.2837, 12.2886],
-    "Linköping": [58.4108, 15.6214],
-    "Helsingborg": [56.0465, 12.6945],
-    "Falun": [60.6065, 15.6355],
-    "Växjö": [56.8777, 14.8091],
-    "Lund": [55.7047, 13.1910],
-    "Norrköping": [58.5942, 16.1826],
-    "Siljansnäs": [60.9500, 14.8500],
-    "Jönköping": [57.7826, 14.1618],
-    "Örebro": [59.2753, 15.2134],
-    "Kosta": [56.8430, 15.4070],
-    "Eskilstuna": [59.3666, 16.5077],
-    "Uppsala": [59.8586, 17.6389],
-    "Sundsvall": [62.3908, 17.3069],
-    "Visby": [57.6348, 18.2948],
-    "Borås": [57.7210, 12.9401],
-};
+      const COORDS = {
+        "Lohärad-Råby": [59.72, 18.55],
+        Göteborg: [57.7089, 11.9746],
+        Lidköping: [58.5052, 13.1579],
+        "Storön, Vänern, Gullspång": [58.98, 14.1],
+        Stockholm: [59.3293, 18.0686],
+        Malmö: [55.605, 13.0038],
+        Trollhättan: [58.2837, 12.2886],
+        Linköping: [58.4108, 15.6214],
+        Helsingborg: [56.0465, 12.6945],
+        Falun: [60.6065, 15.6355],
+        Växjö: [56.8777, 14.8091],
+        Lund: [55.7047, 13.191],
+        Norrköping: [58.5942, 16.1826],
+        Siljansnäs: [60.95, 14.85],
+        Jönköping: [57.7826, 14.1618],
+        Örebro: [59.2753, 15.2134],
+        Kosta: [56.843, 15.407],
+        Eskilstuna: [59.3666, 16.5077],
+        Uppsala: [59.8586, 17.6389],
+        Sundsvall: [62.3908, 17.3069],
+        Visby: [57.6348, 18.2948],
+        Borås: [57.721, 12.9401],
+      };
 
-// ============================================================
-// HELPERS
-// ============================================================
-const STAT_START_YEAR = 1995;
+      // ============================================================
+      // HELPERS
+      // ============================================================
+      const STAT_START_YEAR = 1995;
 
-function linearRegression(points) {
-    const n = points.length;
-    if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-    for (const [x, y] of points) { sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x; }
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    const ssRes = points.reduce((s, [x, y]) => s + (y - (slope * x + intercept)) ** 2, 0);
-    const ssTot = points.reduce((s, [x, y]) => s + (y - sumY / n) ** 2, 0);
-    const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
-    return { slope, intercept, r2 };
-}
+      // Beräkna påskdagen (Meeus/Jones/Butcher algoritm)
+      function easterSunday(year) {
+        const a = year % 19;
+        const b = Math.floor(year / 100);
+        const c = year % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31);
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+        return new Date(year, month - 1, day);
+      }
 
-function forecast(reg, year) { return Math.max(0, Math.round(reg.slope * year + reg.intercept)); }
+      // Kristi himmelsfärdsdag = påsk + 39 dagar
+      function ascensionDay(year) {
+        const easter = easterSunday(year);
+        return new Date(easter.getTime() + 39 * 24 * 60 * 60 * 1000);
+      }
 
-function getValidMembers() {
-    return DATA.filter(d => d.year >= STAT_START_YEAR && d.members != null && !d.cancelled).map(d => [d.year, d.members]);
-}
+      // SWAG-helgen: ons–sön kring Kristi himmelsfärd (tors)
+      // Onsdag = himmelsfärd - 1 dag, Söndag = himmelsfärd + 2 dagar
+      function swagEndDate(year) {
+        const asc = ascensionDay(year);
+        return new Date(asc.getTime() + 2 * 24 * 60 * 60 * 1000); // Söndag
+      }
 
-function getValidAttendees() {
-    return DATA.filter(d => d.year >= STAT_START_YEAR && d.attendees != null && d.attendees > 0 && !d.cancelled).map(d => [d.year, d.attendees]);
-}
+      // Har årets SWAG redan passerat?
+      function hasSwagPassed(year) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const end = swagEndDate(year);
+        return today > end;
+      }
 
-function getNextSwag() {
-    const lastCompleted = DATA.filter(d => d.attendees != null && d.attendees > 0 && !d.cancelled).slice(-1)[0];
-    const lastYear = lastCompleted ? lastCompleted.year : 0;
-    return DATA.find(d => d.year > lastYear && d.location && (d.attendees == null || d.attendees === 0) && !d.cancelled);
-}
-
-function getLastCompletedYear() {
-    const completed = DATA.filter(d => d.members != null && !d.cancelled);
-    return completed[completed.length - 1];
-}
-
-function yearColor(index, total) {
-    const ratio = index / (total - 1 || 1);
-    const r = Math.round(26 + ratio * (255 - 26));
-    const g = Math.round(35 + ratio * (87 - 35));
-    const b = Math.round(126 + ratio * (34 - 126));
-    return `rgb(${r},${g},${b})`;
-}
-
-// ============================================================
-// NYCKELTAL
-// ============================================================
-function renderStats() {
-    const latest = getLastCompletedYear();
-    const validAtt = DATA.filter(d => d.attendees && d.attendees > 0 && !d.cancelled);
-    const maxAtt = validAtt.reduce((max, d) => d.attendees > max.attendees ? d : max, { attendees: 0 });
-    const gatherings = validAtt.length;
-    const nextSwag = getNextSwag();
-    const avgAtt5 = validAtt.slice(-5).reduce((s, d) => s + d.attendees, 0) / Math.min(5, validAtt.length);
-
-    const stats = [
-        { value: latest.members.toLocaleString('sv-SE'), label: `Medlemmar (${latest.year})`, cls: '' },
-        { value: maxAtt.attendees.toLocaleString('sv-SE'), label: `Rekord: ${maxAtt.location} ${maxAtt.year}`, cls: 'accent' },
-        { value: gatherings, label: 'Genomf\u00f6rda SWAG', cls: '' },
-        { value: Math.round(avgAtt5), label: 'Snitt deltagare (5 senaste)', cls: '' },
-        { value: nextSwag ? nextSwag.location : '?', label: nextSwag ? `N\u00e4sta SWAG ${nextSwag.year}` : 'N\u00e4sta SWAG', cls: 'accent' },
-    ];
-
-    document.getElementById('statsGrid').innerHTML = stats.map(s =>
-        `<div class="stat-card ${s.cls}"><div class="value">${s.value}</div><div class="label">${s.label}</div></div>`
-    ).join('');
-}
-
-// ============================================================
-// MEDLEMSGRAF
-// ============================================================
-function renderMembersChart() {
-    const points = getValidMembers();
-    const reg = linearRegression(points.filter(p => p[0] >= 2000));
-    const forecastYears = [];
-    const lastYear = points[points.length - 1][0];
-    for (let y = lastYear + 1; y <= lastYear + 4; y++) forecastYears.push(y);
-
-    const allLabels = [...points.map(p => p[0]), ...forecastYears];
-    const actual = allLabels.map(y => { const f = points.find(p => p[0] === y); return f ? f[1] : null; });
-    const trend = allLabels.map(y => forecast(reg, y));
-
-    const maxVal = Math.max(...points.map(p => p[1]));
-    const yMax = Math.ceil(maxVal / 1000) * 1000 + 1000;
-
-    new Chart(document.getElementById('membersChart'), {
-        type: 'line',
-        data: { labels: allLabels, datasets: [
-            { label: 'Medlemmar', data: actual, borderColor: '#1a237e', backgroundColor: 'rgba(26,35,126,0.08)', fill: true, tension: 0.3, pointRadius: 3, spanGaps: false },
-            { label: 'Trend (linj\u00e4r, fr\u00e5n 2000)', data: trend, borderColor: '#ffc107', borderDash: [6, 3], pointRadius: 0, fill: false }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
-            scales: { y: { min: 0, max: yMax, title: { display: true, text: 'Antal medlemmar' } }, x: { title: { display: true, text: '\u00c5r' } } }
+      function linearRegression(points) {
+        const n = points.length;
+        if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+        let sumX = 0,
+          sumY = 0,
+          sumXY = 0,
+          sumX2 = 0;
+        for (const [x, y] of points) {
+          sumX += x;
+          sumY += y;
+          sumXY += x * y;
+          sumX2 += x * x;
         }
-    });
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / n;
+        const ssRes = points.reduce(
+          (s, [x, y]) => s + (y - (slope * x + intercept)) ** 2,
+          0,
+        );
+        const ssTot = points.reduce((s, [x, y]) => s + (y - sumY / n) ** 2, 0);
+        const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
+        return { slope, intercept, r2 };
+      }
 
-    document.getElementById('membersTrend').innerHTML =
-        `\ud83d\udcc8 <strong>Trend (sedan 2000):</strong> ~${Math.round(reg.slope)} nya medlemmar/\u00e5r. Prognos ${lastYear + 4}: ~${forecast(reg, lastYear + 4).toLocaleString('sv-SE')}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
-}
+      function forecast(reg, year) {
+        return Math.max(0, Math.round(reg.slope * year + reg.intercept));
+      }
 
-// ============================================================
-// DELTAGARGRAF
-// ============================================================
-function renderAttendeesChart() {
-    const points = getValidAttendees();
-    const reg = linearRegression(points.filter(p => p[0] >= 2010));
-    const forecastYears = [];
-    const lastYear = points[points.length - 1][0];
-    for (let y = lastYear + 1; y <= lastYear + 3; y++) forecastYears.push(y);
+      function getValidMembers() {
+        return DATA.filter(
+          (d) => d.year >= STAT_START_YEAR && d.members != null && !d.cancelled,
+        ).map((d) => [d.year, d.members]);
+      }
 
-    const allLabels = [...points.map(p => p[0]), ...forecastYears];
-    const actual = allLabels.map(y => { const f = points.find(p => p[0] === y); return f ? f[1] : null; });
-    const trend = allLabels.map(y => forecast(reg, y));
+      function getValidAttendees() {
+        return DATA.filter(
+          (d) =>
+            d.year >= STAT_START_YEAR &&
+            d.attendees != null &&
+            d.attendees > 0 &&
+            !d.cancelled,
+        ).map((d) => [d.year, d.attendees]);
+      }
 
-    new Chart(document.getElementById('attendeesChart'), {
-        type: 'bar',
-        data: { labels: allLabels, datasets: [
-            { label: 'Deltagare', data: actual, backgroundColor: 'rgba(26,35,126,0.7)', borderRadius: 3 },
-            { label: 'Trend (fr\u00e5n 2010)', data: trend, type: 'line', borderColor: '#ffc107', borderDash: [6, 3], pointRadius: 0, fill: false }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
-            scales: { y: { min: 0, title: { display: true, text: 'Deltagare' } }, x: {} }
-        }
-    });
+      function getNextSwag() {
+        const lastCompleted = DATA.filter(
+          (d) => d.attendees != null && d.attendees > 0 && !d.cancelled,
+        ).slice(-1)[0];
+        const lastYear = lastCompleted ? lastCompleted.year : 0;
+        return DATA.find(
+          (d) =>
+            d.year > lastYear &&
+            d.location &&
+            (d.attendees == null || d.attendees === 0) &&
+            !d.cancelled &&
+            !hasSwagPassed(d.year),
+        );
+      }
 
-    document.getElementById('attendeesTrend').innerHTML =
-        `\ud83d\udcc8 <strong>Trend (sedan 2010, exkl. pandemi\u00e5r):</strong> ~${Math.round(reg.slope)} fler/\u00e5r. Prognos ${lastYear + 3}: ~${forecast(reg, lastYear + 3).toLocaleString('sv-SE')}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
-}
+      function getLastCompletedYear() {
+        const completed = DATA.filter((d) => d.members != null && !d.cancelled);
+        return completed[completed.length - 1];
+      }
 
-// ============================================================
-// PROCENTGRAF
-// ============================================================
-function renderPercentChart() {
-    const valid = DATA.filter(d => d.year >= STAT_START_YEAR && d.members && d.attendees && d.attendees > 0 && !d.cancelled);
-    const labels = valid.map(d => d.year);
-    const pcts = valid.map(d => ((d.attendees / d.members) * 100).toFixed(1));
+      function yearColor(index, total) {
+        const ratio = index / (total - 1 || 1);
+        const r = Math.round(26 + ratio * (255 - 26));
+        const g = Math.round(35 + ratio * (87 - 35));
+        const b = Math.round(126 + ratio * (34 - 126));
+        return `rgb(${r},${g},${b})`;
+      }
 
-    new Chart(document.getElementById('percentChart'), {
-        type: 'line',
-        data: { labels, datasets: [{
-            label: '% av medlemmar som deltog', data: pcts,
-            borderColor: '#ff5722', backgroundColor: 'rgba(255,87,34,0.1)', fill: true, tension: 0.3, pointRadius: 3,
-        }]},
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } },
-            scales: { y: { min: 0, title: { display: true, text: '%' } }, x: {} }
-        }
-    });
+      // ============================================================
+      // NYCKELTAL
+      // ============================================================
+      function renderStats() {
+        const latest = getLastCompletedYear();
+        const validAtt = DATA.filter(
+          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const maxAtt = validAtt.reduce(
+          (max, d) => (d.attendees > max.attendees ? d : max),
+          { attendees: 0 },
+        );
+        const gatherings = validAtt.length;
+        const nextSwag = getNextSwag();
+        const avgAtt5 =
+          validAtt.slice(-5).reduce((s, d) => s + d.attendees, 0) /
+          Math.min(5, validAtt.length);
 
-    const avg = (pcts.reduce((s, v) => s + parseFloat(v), 0) / pcts.length).toFixed(1);
-    const latest = pcts[pcts.length - 1];
-    document.getElementById('percentNote').innerHTML = `Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste \u00e5ret: <strong>${latest}%</strong>.`;
-}
+        const stats = [
+          {
+            value: latest.members.toLocaleString("sv-SE"),
+            label: `Medlemmar (${latest.year})`,
+            cls: "",
+          },
+          {
+            value: maxAtt.attendees.toLocaleString("sv-SE"),
+            label: `Rekord: ${maxAtt.location} ${maxAtt.year}`,
+            cls: "accent",
+          },
+          { value: gatherings, label: "Genomf\u00f6rda SWAG", cls: "" },
+          {
+            value: Math.round(avgAtt5),
+            label: "Snitt deltagare (5 senaste)",
+            cls: "",
+          },
+          {
+            value: nextSwag ? nextSwag.location : "?",
+            label: nextSwag
+              ? `N\u00e4sta SWAG ${nextSwag.year}`
+              : "N\u00e4sta SWAG",
+            cls: "accent",
+          },
+        ];
 
-// ============================================================
-// TOP 5 & SENASTE 5
-// ============================================================
-function renderTop5() {
-    const valid = DATA.filter(d => d.attendees && d.attendees > 0 && !d.cancelled);
-    const top5 = [...valid].sort((a, b) => b.attendees - a.attendees).slice(0, 5);
-    new Chart(document.getElementById('top5Chart'), {
-        type: 'bar',
-        data: { labels: top5.map(d => `${d.location} ${d.year}`), datasets: [{ label: 'Deltagare', data: top5.map(d => d.attendees), backgroundColor: ['#ffc107','#ff9800','#ff5722','#1a237e','#3949ab'], borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0 } } }
-    });
-}
+        document.getElementById("statsGrid").innerHTML = stats
+          .map(
+            (s) =>
+              `<div class="stat-card ${s.cls}"><div class="value">${s.value}</div><div class="label">${s.label}</div></div>`,
+          )
+          .join("");
+      }
 
-function renderRecent5() {
-    const valid = DATA.filter(d => d.attendees && d.attendees > 0 && !d.cancelled);
-    const recent5 = valid.slice(-5);
-    new Chart(document.getElementById('recent5Chart'), {
-        type: 'bar',
-        data: { labels: recent5.map(d => `${d.location} ${d.year}`), datasets: [{ label: 'Deltagare', data: recent5.map(d => d.attendees), backgroundColor: '#3949ab', borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }
-    });
-}
+      // ============================================================
+      // MEDLEMSGRAF
+      // ============================================================
+      function renderMembersChart() {
+        const points = getValidMembers();
+        const reg = linearRegression(points.filter((p) => p[0] >= 2000));
+        const forecastYears = [];
+        const lastYear = points[points.length - 1][0];
+        for (let y = lastYear + 1; y <= lastYear + 4; y++)
+          forecastYears.push(y);
 
-// ============================================================
-// PROGNOS NASTA AR (dynamisk)
-// ============================================================
-function renderForecast() {
-    const nextSwag = getNextSwag();
-    if (!nextSwag) return;
+        const allLabels = [...points.map((p) => p[0]), ...forecastYears];
+        const actual = allLabels.map((y) => {
+          const f = points.find((p) => p[0] === y);
+          return f ? f[1] : null;
+        });
+        const trend = allLabels.map((y) => forecast(reg, y));
 
-    const attReg = linearRegression(getValidAttendees().filter(p => p[0] >= 2010));
-    const memReg = linearRegression(getValidMembers().filter(p => p[0] >= 2010));
+        const maxVal = Math.max(...points.map((p) => p[1]));
+        const yMax = Math.ceil(maxVal / 1000) * 1000 + 1000;
 
-    const predAtt = forecast(attReg, nextSwag.year);
-    const predMem = forecast(memReg, nextSwag.year);
-    const predPct = predMem > 0 ? ((predAtt / predMem) * 100).toFixed(1) : '?';
+        new Chart(document.getElementById("membersChart"), {
+          type: "line",
+          data: {
+            labels: allLabels,
+            datasets: [
+              {
+                label: "Medlemmar",
+                data: actual,
+                borderColor: "#1a237e",
+                backgroundColor: "rgba(26,35,126,0.08)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                spanGaps: false,
+              },
+              {
+                label: "Trend (linj\u00e4r, fr\u00e5n 2000)",
+                data: trend,
+                borderColor: "#ffc107",
+                borderDash: [6, 3],
+                pointRadius: 0,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              y: {
+                min: 0,
+                max: yMax,
+                title: { display: true, text: "Antal medlemmar" },
+              },
+              x: { title: { display: true, text: "\u00c5r" } },
+            },
+          },
+        });
 
-    const valid = DATA.filter(d => d.attendees && d.attendees > 0 && !d.cancelled);
-    const recent = valid.slice(-5);
-    const labels = [...recent.map(d => `${d.year}`), `${nextSwag.year}?`];
-    const values = [...recent.map(d => d.attendees), predAtt];
-    const bgColors = [...recent.map(() => '#3949ab'), '#ffc107'];
+        document.getElementById("membersTrend").innerHTML =
+          `\ud83d\udcc8 <strong>Trend (sedan 2000):</strong> ~${Math.round(reg.slope)} nya medlemmar/\u00e5r. Prognos ${lastYear + 4}: ~${forecast(reg, lastYear + 4).toLocaleString("sv-SE")}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
+      }
 
-    document.getElementById('forecastTitle').textContent = `Prognos: Mensa SWAG ${nextSwag.year} i ${nextSwag.location}`;
+      // ============================================================
+      // DELTAGARGRAF
+      // ============================================================
+      function renderAttendeesChart() {
+        const points = getValidAttendees();
+        const reg = linearRegression(points.filter((p) => p[0] >= 2010));
+        const forecastYears = [];
+        const lastYear = points[points.length - 1][0];
+        for (let y = lastYear + 1; y <= lastYear + 3; y++)
+          forecastYears.push(y);
 
-    new Chart(document.getElementById('forecastChart'), {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Deltagare', data: values, backgroundColor: bgColors, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }
-    });
+        const allLabels = [...points.map((p) => p[0]), ...forecastYears];
+        const actual = allLabels.map((y) => {
+          const f = points.find((p) => p[0] === y);
+          return f ? f[1] : null;
+        });
+        const trend = allLabels.map((y) => forecast(reg, y));
 
-    document.getElementById('forecastText').innerHTML = `
+        new Chart(document.getElementById("attendeesChart"), {
+          type: "bar",
+          data: {
+            labels: allLabels,
+            datasets: [
+              {
+                label: "Deltagare",
+                data: actual,
+                backgroundColor: "rgba(26,35,126,0.7)",
+                borderRadius: 3,
+              },
+              {
+                label: "Trend (fr\u00e5n 2010)",
+                data: trend,
+                type: "line",
+                borderColor: "#ffc107",
+                borderDash: [6, 3],
+                pointRadius: 0,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              y: { min: 0, title: { display: true, text: "Deltagare" } },
+              x: {},
+            },
+          },
+        });
+
+        document.getElementById("attendeesTrend").innerHTML =
+          `\ud83d\udcc8 <strong>Trend (sedan 2010, exkl. pandemi\u00e5r):</strong> ~${Math.round(reg.slope)} fler/\u00e5r. Prognos ${lastYear + 3}: ~${forecast(reg, lastYear + 3).toLocaleString("sv-SE")}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
+      }
+
+      // ============================================================
+      // PROCENTGRAF
+      // ============================================================
+      function renderPercentChart() {
+        const valid = DATA.filter(
+          (d) =>
+            d.year >= STAT_START_YEAR &&
+            d.members &&
+            d.attendees &&
+            d.attendees > 0 &&
+            !d.cancelled,
+        );
+        const labels = valid.map((d) => d.year);
+        const pcts = valid.map((d) =>
+          ((d.attendees / d.members) * 100).toFixed(1),
+        );
+
+        // Trendlinje för procentandelen
+        const pctPoints = valid.map((d) => [
+          d.year,
+          (d.attendees / d.members) * 100,
+        ]);
+        const pctReg = linearRegression(pctPoints);
+        const trendData = labels.map((y) =>
+          Math.max(0, pctReg.slope * y + pctReg.intercept).toFixed(1),
+        );
+
+        new Chart(document.getElementById("percentChart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "% av medlemmar som deltog",
+                data: pcts,
+                borderColor: "#ff5722",
+                backgroundColor: "rgba(255,87,34,0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+              },
+              {
+                label: "Trend (linjär)",
+                data: trendData,
+                borderColor: "#ffc107",
+                borderDash: [6, 3],
+                pointRadius: 0,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              y: { min: 0, title: { display: true, text: "%" } },
+              x: {},
+            },
+          },
+        });
+
+        const avg = (
+          pcts.reduce((s, v) => s + parseFloat(v), 0) / pcts.length
+        ).toFixed(1);
+        const latest = pcts[pcts.length - 1];
+        const trendDir = pctReg.slope > 0 ? "uppåt" : "nedåt";
+        document.getElementById("percentNote").innerHTML =
+          `Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste året: <strong>${latest}%</strong>. Trend: <strong>${trendDir}</strong> (${pctReg.slope > 0 ? "+" : ""}${pctReg.slope.toFixed(2)} procentenheter/år).`;
+      }
+
+      // ============================================================
+      // TOP 5 & SENASTE 5
+      // ============================================================
+      function renderTop5() {
+        const valid = DATA.filter(
+          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const top5 = [...valid]
+          .sort((a, b) => b.attendees - a.attendees)
+          .slice(0, 5);
+        new Chart(document.getElementById("top5Chart"), {
+          type: "bar",
+          data: {
+            labels: top5.map((d) => `${d.location} ${d.year}`),
+            datasets: [
+              {
+                label: "Deltagare",
+                data: top5.map((d) => d.attendees),
+                backgroundColor: [
+                  "#ffc107",
+                  "#ff9800",
+                  "#ff5722",
+                  "#1a237e",
+                  "#3949ab",
+                ],
+                borderRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            plugins: { legend: { display: false } },
+            scales: { x: { min: 0 } },
+          },
+        });
+      }
+
+      function renderRecent5() {
+        const valid = DATA.filter(
+          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const recent5 = valid.slice(-5);
+        new Chart(document.getElementById("recent5Chart"), {
+          type: "bar",
+          data: {
+            labels: recent5.map((d) => `${d.location} ${d.year}`),
+            datasets: [
+              {
+                label: "Deltagare",
+                data: recent5.map((d) => d.attendees),
+                backgroundColor: "#3949ab",
+                borderRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0 } },
+          },
+        });
+      }
+
+      // ============================================================
+      // PROGNOS NASTA AR (dynamisk)
+      // ============================================================
+      function renderForecast() {
+        const nextSwag = getNextSwag();
+        if (!nextSwag) return;
+
+        const attReg = linearRegression(
+          getValidAttendees().filter((p) => p[0] >= 2010),
+        );
+        const memReg = linearRegression(
+          getValidMembers().filter((p) => p[0] >= 2010),
+        );
+
+        const predAtt = forecast(attReg, nextSwag.year);
+        const predMem = forecast(memReg, nextSwag.year);
+        const predPct =
+          predMem > 0 ? ((predAtt / predMem) * 100).toFixed(1) : "?";
+
+        const valid = DATA.filter(
+          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const recent = valid.slice(-5);
+        const labels = [...recent.map((d) => `${d.year}`), `${nextSwag.year}?`];
+        const values = [...recent.map((d) => d.attendees), predAtt];
+        const bgColors = [...recent.map(() => "#3949ab"), "#ffc107"];
+
+        document.getElementById("forecastTitle").textContent =
+          `Prognos: Mensa SWAG ${nextSwag.year} i ${nextSwag.location}`;
+
+        new Chart(document.getElementById("forecastChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Deltagare",
+                data: values,
+                backgroundColor: bgColors,
+                borderRadius: 4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { min: 0 } },
+          },
+        });
+
+        const asc = ascensionDay(nextSwag.year);
+        const swagStart = new Date(asc.getTime() - 1 * 24 * 60 * 60 * 1000); // onsdag
+        const swagEnd = new Date(asc.getTime() + 2 * 24 * 60 * 60 * 1000); // söndag
+        const dateOpts = { day: "numeric", month: "long" };
+        const swagDateStr = `${swagStart.toLocaleDateString("sv-SE", dateOpts)} – ${swagEnd.toLocaleDateString("sv-SE", dateOpts)}`;
+
+        document.getElementById("forecastText").innerHTML = `
         <div style="padding:1rem;">
-            <h3 style="color:var(--primary);margin-bottom:0.5rem;">Mensa SWAG ${nextSwag.year} \u2013 ${nextSwag.location}</h3>
-            <p><strong>Uppskattade deltagare:</strong> ~${predAtt.toLocaleString('sv-SE')}</p>
-            <p><strong>Uppskattade medlemmar:</strong> ~${predMem.toLocaleString('sv-SE')}</p>
-            <p><strong>F\u00f6rv\u00e4ntad deltagarandel:</strong> ~${predPct}%</p>
-            <p style="margin-top:0.8rem;color:var(--muted);font-size:0.85rem;">Baserat p\u00e5 linj\u00e4r trend sedan 2010 (exkl. pandemi\u00e5r).</p>
+            <h3 style="color:var(--primary);margin-bottom:0.5rem;">Mensa SWAG ${nextSwag.year} – ${nextSwag.location}</h3>
+            <p><strong>Datum:</strong> ${swagDateStr} (Kristi himmelsfärdshelgen)</p>
+            <p><strong>Uppskattade deltagare:</strong> ~${predAtt.toLocaleString("sv-SE")}</p>
+            <p><strong>Uppskattade medlemmar:</strong> ~${predMem.toLocaleString("sv-SE")}</p>
+            <p><strong>Förväntad deltagarandel:</strong> ~${predPct}%</p>
+            <p style="margin-top:0.8rem;color:var(--muted);font-size:0.85rem;">Baserat på linjär trend sedan 2010 (exkl. pandemiår).</p>
         </div>`;
-}
+      }
 
-// ============================================================
-// KARTA - inzoomad till Sverige, fargkodad, med slider
-// ============================================================
-let mapInstance = null;
-let mapMarkers = [];
-let mapLine = null;
+      // ============================================================
+      // KARTA - inzoomad till Sverige, fargkodad, med slider
+      // ============================================================
+      let mapInstance = null;
+      let mapMarkers = [];
+      let mapLine = null;
 
-function renderMap(minYear, maxYear) {
-    if (!minYear) minYear = 1995;
-    if (!maxYear) maxYear = 2027;
+      function renderMap(minYear, maxYear) {
+        if (!minYear) minYear = 1995;
+        if (!maxYear) maxYear = 2027;
 
-    if (!mapInstance) {
-        mapInstance = L.map('map').setView([62.0, 15.5], 5);
-        mapInstance.setMaxBounds([[54.5, 8.0], [70.0, 25.0]]);
-        mapInstance.setMinZoom(4);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        if (!mapInstance) {
+          mapInstance = L.map("map").setView([62.0, 15.5], 5);
+          mapInstance.setMaxBounds([
+            [54.5, 8.0],
+            [70.0, 25.0],
+          ]);
+          mapInstance.setMinZoom(4);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution:
+              '\u00a9 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
             maxZoom: 12,
-        }).addTo(mapInstance);
-    }
+          }).addTo(mapInstance);
+        }
 
-    // Clear existing markers
-    mapMarkers.forEach(m => mapInstance.removeLayer(m));
-    mapMarkers = [];
-    if (mapLine) { mapInstance.removeLayer(mapLine); mapLine = null; }
+        // Clear existing markers
+        mapMarkers.forEach((m) => mapInstance.removeLayer(m));
+        mapMarkers = [];
+        if (mapLine) {
+          mapInstance.removeLayer(mapLine);
+          mapLine = null;
+        }
 
-    const withLoc = DATA.filter(d => d.location && COORDS[d.location] && d.year >= minYear && d.year <= maxYear).sort((a, b) => a.year - b.year);
-    const total = withLoc.length;
+        const withLoc = DATA.filter(
+          (d) =>
+            d.location &&
+            COORDS[d.location] &&
+            d.year >= minYear &&
+            d.year <= maxYear,
+        ).sort((a, b) => a.year - b.year);
+        const total = withLoc.length;
 
-    const locCount = {};
-    const coords = [];
+        const locCount = {};
+        const coords = [];
 
-    withLoc.forEach((d, idx) => {
-        const [lat, lng] = COORDS[d.location];
-        const color = d.cancelled ? '#c62828' : yearColor(idx, total);
-        const att = d.attendees && d.attendees > 0 ? `${d.attendees} deltagare` : (d.cancelled ? 'Inst\u00e4llt' : 'Kommande');
+        withLoc.forEach((d, idx) => {
+          const [lat, lng] = COORDS[d.location];
+          const color = d.cancelled ? "#c62828" : yearColor(idx, total);
+          const att =
+            d.attendees && d.attendees > 0
+              ? `${d.attendees} deltagare`
+              : d.cancelled
+                ? "Inställt"
+                : hasSwagPassed(d.year)
+                  ? "Genomförd (data saknas)"
+                  : "Kommande";
 
-        locCount[d.location] = (locCount[d.location] || 0);
-        const visitNum = locCount[d.location];
-        locCount[d.location]++;
-        const offset = visitNum * 0.04;
+          locCount[d.location] = locCount[d.location] || 0;
+          const visitNum = locCount[d.location];
+          locCount[d.location]++;
+          const offset = visitNum * 0.04;
 
-        const pos = [lat + offset, lng + offset];
-        coords.push(pos);
+          const pos = [lat + offset, lng + offset];
+          coords.push(pos);
 
-        const marker = L.circleMarker(pos, {
-            radius: 8, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85,
-        }).addTo(mapInstance).bindPopup(`<strong>${d.location} ${d.year}</strong><br>${att}${d.comment ? '<br><em>' + d.comment + '</em>' : ''}`);
-        mapMarkers.push(marker);
-    });
+          const marker = L.circleMarker(pos, {
+            radius: 8,
+            fillColor: color,
+            color: "#fff",
+            weight: 2,
+            fillOpacity: 0.85,
+          })
+            .addTo(mapInstance)
+            .bindPopup(
+              `<strong>${d.location} ${d.year}</strong><br>${att}${d.comment ? "<br><em>" + d.comment + "</em>" : ""}`,
+            );
+          mapMarkers.push(marker);
+        });
 
-    if (coords.length > 1) {
-        mapLine = L.polyline(coords, { color: 'rgba(26,35,126,0.3)', weight: 1.5, dashArray: '4 4' }).addTo(mapInstance);
-    }
-}
+        if (coords.length > 1) {
+          mapLine = L.polyline(coords, {
+            color: "rgba(26,35,126,0.3)",
+            weight: 1.5,
+            dashArray: "4 4",
+          }).addTo(mapInstance);
+        }
+      }
 
-function setupMapSliders() {
-    const sliderMin = document.getElementById('mapSliderMin');
-    const sliderMax = document.getElementById('mapSliderMax');
-    const display = document.getElementById('mapYearDisplay');
+      function setupMapSliders() {
+        const sliderMin = document.getElementById("mapSliderMin");
+        const sliderMax = document.getElementById("mapSliderMax");
+        const displayMin = document.getElementById("mapYearMin");
+        const displayMax = document.getElementById("mapYearMax");
+        const mapInfo = document.getElementById("mapInfo");
 
-    function update() {
-        let minY = parseInt(sliderMin.value);
-        let maxY = parseInt(sliderMax.value);
-        if (minY > maxY) { const t = minY; minY = maxY; maxY = t; sliderMin.value = minY; sliderMax.value = maxY; }
-        display.textContent = `${minY}\u2013${maxY}`;
-        renderMap(minY, maxY);
-    }
+        function update() {
+          let minY = parseInt(sliderMin.value);
+          let maxY = parseInt(sliderMax.value);
+          if (minY > maxY) {
+            const t = minY;
+            minY = maxY;
+            maxY = t;
+            sliderMin.value = minY;
+            sliderMax.value = maxY;
+          }
+          displayMin.textContent = minY;
+          displayMax.textContent = maxY;
 
-    sliderMin.addEventListener('input', update);
-    sliderMax.addEventListener('input', update);
-}
+          const inRange = DATA.filter(
+            (d) => d.year >= minY && d.year <= maxY && d.location,
+          );
+          const held = inRange.filter(
+            (d) =>
+              (d.attendees && d.attendees > 0 && !d.cancelled) ||
+              (!d.cancelled && d.attendees == null && hasSwagPassed(d.year)),
+          ).length;
+          const cancelled = inRange.filter((d) => d.cancelled).length;
+          const upcoming = inRange.filter(
+            (d) =>
+              !d.cancelled &&
+              d.attendees == null &&
+              d.location &&
+              !hasSwagPassed(d.year),
+          ).length;
 
-// ============================================================
-// FUN FACTS
-// ============================================================
-function renderFunFacts() {
-    const valid = DATA.filter(d => d.attendees && d.attendees > 0 && !d.cancelled);
-    const totalAttendees = valid.reduce((s, d) => s + d.attendees, 0);
-    const uniqueLocations = new Set(DATA.filter(d => d.location).map(d => d.location)).size;
-    const memberGrowth = DATA.filter(d => d.members).slice(-1)[0].members - DATA.filter(d => d.members)[0].members;
+          let info = `${held} genomförda årsträffar`;
+          if (cancelled > 0) info += `, ${cancelled} inställda`;
+          if (upcoming > 0) info += `, ${upcoming} kommande`;
+          mapInfo.textContent = info;
 
-    const facts = [
-        `${totalAttendees.toLocaleString('sv-SE')} totala SWAG-deltagare genom \u00e5ren`,
-        `${uniqueLocations} unika platser`,
-        `+${memberGrowth.toLocaleString('sv-SE')} medlemmar sedan starten`,
-        `SWAG 2017: Polisen kallades till festen`,
-        `F\u00f6rsta SWAG: 4 deltagare (1995)`,
-    ];
+          renderMap(minY, maxY);
+        }
 
-    document.getElementById('funFacts').innerHTML = facts.map(f => `<span class="fun-fact">${f}</span>`).join('');
-}
+        sliderMin.addEventListener("input", update);
+        sliderMax.addEventListener("input", update);
+        update();
+      }
 
-// ============================================================
-// TABELL
-// ============================================================
-function renderTable() {
-    const tbody = document.querySelector('#dataTable tbody');
-    tbody.innerHTML = DATA.slice().reverse().map(d => {
-        const cls = d.cancelled ? ' class="cancelled"' : '';
-        return `<tr${cls}>
+      // ============================================================
+      // FUN FACTS
+      // ============================================================
+      function renderFunFacts() {
+        const valid = DATA.filter(
+          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const totalAttendees = valid.reduce((s, d) => s + d.attendees, 0);
+        const uniqueLocations = new Set(
+          DATA.filter((d) => d.location).map((d) => d.location),
+        ).size;
+        const memberGrowth =
+          DATA.filter((d) => d.members).slice(-1)[0].members -
+          DATA.filter((d) => d.members)[0].members;
+
+        const facts = [
+          `${totalAttendees.toLocaleString("sv-SE")} totala SWAG-deltagare genom \u00e5ren`,
+          `${uniqueLocations} unika platser`,
+          `+${memberGrowth.toLocaleString("sv-SE")} medlemmar sedan starten`,
+          `SWAG 2017: Polisen kallades till festen`,
+          `F\u00f6rsta SWAG: 4 deltagare (1995)`,
+        ];
+
+        document.getElementById("funFacts").innerHTML = facts
+          .map((f) => `<span class="fun-fact">${f}</span>`)
+          .join("");
+      }
+
+      // ============================================================
+      // TABELL
+      // ============================================================
+      function renderTable() {
+        const tbody = document.querySelector("#dataTable tbody");
+        tbody.innerHTML = DATA.slice()
+          .reverse()
+          .map((d) => {
+            const cls = d.cancelled ? ' class="cancelled"' : "";
+            return `<tr${cls}>
             <td>${d.year}</td>
-            <td>${d.members != null ? d.members.toLocaleString('sv-SE') : '\u2013'}</td>
-            <td>${d.attendees != null ? (d.attendees === 0 && d.cancelled ? '\u2013' : d.attendees.toLocaleString('sv-SE')) : '\u2013'}</td>
-            <td>${d.location || '\u2013'}</td>
-            <td>${d.comment || ''}</td>
+            <td>${d.members != null ? d.members.toLocaleString("sv-SE") : "\u2013"}</td>
+            <td>${d.attendees != null ? (d.attendees === 0 && d.cancelled ? "\u2013" : d.attendees.toLocaleString("sv-SE")) : "\u2013"}</td>
+            <td>${d.location || "\u2013"}</td>
+            <td>${d.comment || ""}</td>
         </tr>`;
-    }).join('');
-}
+          })
+          .join("");
+      }
 
-// ============================================================
-// INIT
-// ============================================================
-renderStats();
-renderMembersChart();
-renderAttendeesChart();
-renderPercentChart();
-renderTop5();
-renderRecent5();
-renderForecast();
-renderMap();
-setupMapSliders();
-renderFunFacts();
-renderTable();
-</script>
-</body>
+      // ============================================================
+      // INIT
+      // ============================================================
+      renderStats();
+      renderMembersChart();
+      renderAttendeesChart();
+      renderPercentChart();
+      renderTop5();
+      renderRecent5();
+      renderForecast();
+      renderMap();
+      setupMapSliders();
+      renderFunFacts();
+      renderTable();
+    </script>
+  </body>
 </html>
