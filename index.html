@@ -1962,7 +1962,8 @@
           "Mån",
         ];
         // Ankomst: % som anländer respektive dag
-        const arrival = [0, 1, 2, 7, 60, 28, 2, 0, 0];
+        // SWAG börjar onsdag – majoriteten anländer ons (70%), resten tors/fre
+        const arrival = [0, 0, 3, 70, 18, 8, 1, 0, 0];
         // Avresa: % som åker respektive dag
         const departure = [0, 0, 0, 0, 0, 1, 4, 5, 85, 5];
         // Justera: avresa börjar tors (index 4)
