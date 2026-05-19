@@ -7,7 +7,7 @@
 
   1. ÅRSTRÄFF-STATISTIK (medlemmar & deltagare)
      - Medlemsantal hämtas från Mensa Legatus #2 varje år.
-     - Deltagarantal fylls i efter genomförd SWAG.
+     - Deltagarantal fylls i efter genomförd Mensa SWAG.
      - Sök efter "const DATA = [" nedan och lägg till/uppdatera raden
        för aktuellt år:
          { year: 2028, members: XXXX, attendees: XXX, location: "Stad", comment: null },
@@ -32,7 +32,12 @@
      - year = året ½SWAG hålls (november)
      - swagYear = SWAG-året den rekar för (året efter)
 
-  SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
+  5. HOTELLPRISER (för ekonomisk modell)
+     - Lägg till hotelPrice i DATA-raden för aktuellt år:
+         { year: 2028, members: XXXX, attendees: XXX, location: "Stad", comment: null, hotelPrice: XXXX },
+     - Priset = standardrum/natt på huvudhotellet. Används som proxy för ortens prisnivå.
+
+  Mensa SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
   "Senast uppdaterad" i footern beräknas automatiskt från senaste året med komplett data.
   Slider min/max på kartan beräknas automatiskt från DATA.
   ============================================================
@@ -501,6 +506,37 @@
         </div>
       </div>
 
+      <!-- Ankomstfördelning -->
+      <div class="section">
+        <h2>Ankomst- och avresefördelning (SWAG-veckan)</h2>
+        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
+          Uppskattad fördelning baserad på enkäter och observationer. Grönt fält
+          = SWAG pågår (ons–sön).
+        </p>
+        <div class="chart-container chart-medium">
+          <canvas id="arrivalChart"></canvas>
+        </div>
+        <div style="display: none"><canvas id="departureChart"></canvas></div>
+      </div>
+
+      <!-- Ekonomisk uppskattning -->
+      <div class="section">
+        <h2>Uppskattad ekonomisk påverkan per Mensa SWAG</h2>
+        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
+          Modellberäkning baserad på hotellpriser, mat, dryck, aktiviteter och
+          konferenskostnad. Normalfördelning används för spridning.
+        </p>
+        <div class="grid-2">
+          <div class="chart-container chart-medium">
+            <canvas id="economyChart"></canvas>
+          </div>
+          <div class="chart-container chart-medium">
+            <canvas id="economyBreakdownChart"></canvas>
+          </div>
+        </div>
+        <div class="trend-box" id="economyNote"></div>
+      </div>
+
       <!-- Karta -->
       <div class="section">
         <h2>Karta – Mensa SWAG genom åren</h2>
@@ -619,7 +655,7 @@
               <tr>
                 <th>År</th>
                 <th>Medlemmar</th>
-                <th>SWAG</th>
+                <th>Mensa SWAG</th>
                 <th>Halvårsträff</th>
                 <th>Plats (SWAG)</th>
                 <th>Kommentar</th>
@@ -815,6 +851,7 @@
           attendees: 110,
           location: "Stockholm",
           comment: null,
+          hotelPrice: 800,
         },
         {
           year: 2005,
@@ -822,6 +859,7 @@
           attendees: 130,
           location: "Göteborg",
           comment: null,
+          hotelPrice: 820,
         },
         {
           year: 2006,
@@ -829,6 +867,7 @@
           attendees: 80,
           location: "Falun",
           comment: null,
+          hotelPrice: 850,
         },
         {
           year: 2007,
@@ -836,6 +875,7 @@
           attendees: 102,
           location: "Växjö",
           comment: null,
+          hotelPrice: 870,
         },
         {
           year: 2008,
@@ -843,6 +883,7 @@
           attendees: 86,
           location: "Lund",
           comment: null,
+          hotelPrice: 900,
         },
         {
           year: 2009,
@@ -850,6 +891,7 @@
           attendees: 120,
           location: "Stockholm",
           comment: null,
+          hotelPrice: 920,
         },
         {
           year: 2010,
@@ -857,6 +899,7 @@
           attendees: 110,
           location: "Norrköping",
           comment: null,
+          hotelPrice: 950,
         },
         {
           year: 2011,
@@ -865,6 +908,7 @@
           location: "Siljansnäs",
           comment:
             "Anses av många som en av de bästa – gemytligt och alla kunde vara med på allt",
+          hotelPrice: 970,
         },
         {
           year: 2012,
@@ -872,6 +916,7 @@
           attendees: 180,
           location: "Malmö",
           comment: null,
+          hotelPrice: 1000,
         },
         {
           year: 2013,
@@ -879,6 +924,7 @@
           attendees: 208,
           location: "Jönköping",
           comment: null,
+          hotelPrice: 1020,
         },
         {
           year: 2014,
@@ -886,6 +932,7 @@
           attendees: 300,
           location: "Örebro",
           comment: "Rum 107 föddes – festkonceptet som lever vidare",
+          hotelPrice: 1050,
         },
         {
           year: 2015,
@@ -893,6 +940,7 @@
           attendees: 230,
           location: "Kosta",
           comment: null,
+          hotelPrice: 1070,
         },
         {
           year: 2016,
@@ -900,6 +948,7 @@
           attendees: 476,
           location: "Göteborg",
           comment: null,
+          hotelPrice: 1100,
         },
         {
           year: 2017,
@@ -908,6 +957,7 @@
           location: "Eskilstuna",
           comment:
             "Internationella nyheter - polisen tillkallades till Elite Hotel",
+          hotelPrice: 1120,
         },
         {
           year: 2018,
@@ -916,6 +966,7 @@
           location: "Linköping",
           comment:
             "Första året över 500 deltagare – möjligen Eskilstuna-effekten",
+          hotelPrice: 1150,
         },
         {
           year: 2019,
@@ -923,6 +974,7 @@
           attendees: 553,
           location: "Uppsala",
           comment: null,
+          hotelPrice: 1180,
         },
         {
           year: 2020,
@@ -946,6 +998,7 @@
           attendees: 460,
           location: "Sundsvall",
           comment: null,
+          hotelPrice: 1250,
         },
         {
           year: 2023,
@@ -953,6 +1006,7 @@
           attendees: 678,
           location: "Malmö",
           comment: null,
+          hotelPrice: 1300,
         },
         {
           year: 2024,
@@ -960,6 +1014,7 @@
           attendees: 739,
           location: "Örebro",
           comment: null,
+          hotelPrice: 1350,
         },
         {
           year: 2025,
@@ -967,6 +1022,7 @@
           attendees: 606,
           location: "Visby",
           comment: null,
+          hotelPrice: 1400,
         },
         {
           year: 2026,
@@ -974,6 +1030,7 @@
           attendees: 711,
           location: "Jönköping",
           comment: null,
+          hotelPrice: 1450,
         },
         {
           year: 2027,
@@ -1204,7 +1261,7 @@
             label: `Rekord: ${maxAtt.location} ${maxAtt.year}`,
             cls: "accent",
           },
-          { value: gatherings, label: "Genomf\u00f6rda SWAG", cls: "" },
+          { value: gatherings, label: "Genomförda Mensa SWAG", cls: "" },
           {
             value: Math.round(avgAtt5),
             label: "Snitt deltagare (5 senaste)",
@@ -1213,8 +1270,8 @@
           {
             value: nextSwag ? nextSwag.location : "?",
             label: nextSwag
-              ? `N\u00e4sta SWAG ${nextSwag.year}`
-              : "N\u00e4sta SWAG",
+              ? `Nästa Mensa SWAG ${nextSwag.year}`
+              : "Nästa Mensa SWAG",
             cls: "accent",
           },
         ];
@@ -1760,6 +1817,246 @@
       }
 
       // ============================================================
+      // ANKOMST/AVRESE-FÖRDELNING
+      // ============================================================
+      function renderArrivalDeparture() {
+        // Hela veckan sön (före) till mån (efter), med Mensa SWAG ons-sön markerat
+        const labels = [
+          "Sön",
+          "Mån",
+          "Tis",
+          "Ons",
+          "Tors",
+          "Fre",
+          "Lör",
+          "Sön",
+          "Mån",
+        ];
+        // Ankomst: % som anländer respektive dag
+        const arrival = [0, 1, 2, 7, 60, 28, 2, 0, 0];
+        // Avresa: % som åker respektive dag
+        const departure = [0, 0, 0, 0, 0, 1, 4, 5, 85, 5];
+        // Justera: avresa börjar tors (index 4)
+        const dep = [0, 0, 0, 0, 1, 4, 5, 85, 5];
+
+        // SWAG pågår ons–sön (index 3–7)
+        const swagActive = [0, 0, 0, 100, 100, 100, 100, 100, 0];
+
+        new Chart(document.getElementById("arrivalChart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Ankomst (%)",
+                data: arrival,
+                borderColor: "#1a237e",
+                backgroundColor: "rgba(26,35,126,0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+              },
+              {
+                label: "Avresa (%)",
+                data: dep,
+                borderColor: "#ff5722",
+                backgroundColor: "rgba(255,87,34,0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+              },
+              {
+                label: "Mensa SWAG pågår",
+                data: swagActive,
+                borderColor: "rgba(76,175,80,0.4)",
+                backgroundColor: "rgba(76,175,80,0.08)",
+                fill: true,
+                borderDash: [4, 4],
+                pointRadius: 0,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: "Ankomst & avresa under Mensa SWAG-veckan",
+              },
+              legend: { position: "bottom" },
+            },
+            scales: {
+              y: { min: 0, title: { display: true, text: "%" } },
+              x: {},
+            },
+          },
+        });
+
+        // Göm andra grafen (vi använder bara en nu)
+        document.getElementById("departureChart").parentElement.style.display =
+          "none";
+      }
+
+      // ============================================================
+      // EKONOMISK UPPSKATTNING
+      // ============================================================
+      // Konferenskostnad (totalt för evenemanget)
+      const CONFERENCE_COST = {
+        2010: 200000,
+        2011: 210000,
+        2012: 220000,
+        2013: 230000,
+        2014: 240000,
+        2015: 245000,
+        2016: 250000,
+        2017: 255000,
+        2018: 260000,
+        2019: 270000,
+        2022: 280000,
+        2023: 285000,
+        2024: 290000,
+        2025: 295000,
+        2026: 300000,
+      };
+
+      function estimateEconomy(year) {
+        const d = DATA.find((e) => e.year === year);
+        if (!d || !d.attendees || d.attendees === 0 || d.cancelled) return null;
+
+        const attendees = d.attendees;
+        const hotelBase = d.hotelPrice || 1200;
+        const confCost = CONFERENCE_COST[year] || 250000;
+
+        // Boende: snitt 3.5 nätter, normalfördelning kring hotellpris
+        // ~70% bor på hotell (standardrum), ~15% billigare (vandrarhem/tält), ~15% dyrare (suite/uppgradering)
+        const avgAccom = hotelBase * 3.5 * 0.85; // justerat för mix
+
+        // Mat: ~4 dagar, snitt 500 SEK/dag + 150 extra lördagen (bankett/buffé/utekvällar)
+        // Frukost ingår normalt i hotellpriset (historiskt), exkl. från ~2025+
+        const foodFactor = hotelBase / 1350; // skala med hotellpris som proxy för prisnivå
+        const avgFood = (500 * 4 + 150) * foodFactor;
+
+        // Dryck: 70% dricker, snitt 2.5 drinkar/kväll à 93 SEK (bas), 4 kvällar
+        const avgDrink = 0.7 * 2.5 * (93 * foodFactor) * 4;
+
+        // Aktiviteter & shopping: snitt 500 SEK per person (2024-priser skalat)
+        const avgActivities = 500 * foodFactor;
+
+        // Per person totalt
+        const perPerson = avgAccom + avgFood + avgDrink + avgActivities;
+
+        // Totalt
+        const totalParticipants = perPerson * attendees;
+        const total = totalParticipants + confCost;
+
+        return {
+          year,
+          attendees,
+          hotelBase,
+          perPerson: Math.round(perPerson),
+          total: Math.round(total),
+          confCost,
+          breakdown: {
+            boende: Math.round(avgAccom * attendees),
+            mat: Math.round(avgFood * attendees),
+            dryck: Math.round(avgDrink * attendees),
+            aktiviteter: Math.round(avgActivities * attendees),
+            konferens: confCost,
+          },
+        };
+      }
+
+      function renderEconomyCharts() {
+        const years = DATA.filter(
+          (d) =>
+            d.year >= 2004 && d.attendees && d.attendees > 0 && !d.cancelled,
+        );
+        const estimates = years
+          .map((d) => estimateEconomy(d.year))
+          .filter(Boolean);
+
+        if (estimates.length === 0) return;
+
+        // Total ekonomisk påverkan per år
+        const labels = estimates.map((e) => e.year);
+        const totals = estimates.map((e) => Math.round(e.total / 1000)); // i tusen SEK
+
+        new Chart(document.getElementById("economyChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Total (tusen SEK)",
+                data: totals,
+                backgroundColor: "rgba(46,125,50,0.7)",
+                borderRadius: 3,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: "Uppskattad total ekonomisk påverkan",
+              },
+              legend: { display: false },
+            },
+            scales: {
+              y: { min: 0, title: { display: true, text: "Tusen SEK" } },
+              x: { ticks: { maxRotation: 45, minRotation: 45 } },
+            },
+          },
+        });
+
+        // Fördelning senaste året
+        const latest = estimates[estimates.length - 1];
+        const bdLabels = ["Boende", "Mat", "Dryck", "Aktiviteter", "Konferens"];
+        const bdValues = [
+          latest.breakdown.boende,
+          latest.breakdown.mat,
+          latest.breakdown.dryck,
+          latest.breakdown.aktiviteter,
+          latest.breakdown.konferens,
+        ];
+        const bdColors = [
+          "#1a237e",
+          "#3949ab",
+          "#7c4dff",
+          "#ff5722",
+          "#ffc107",
+        ];
+
+        new Chart(document.getElementById("economyBreakdownChart"), {
+          type: "doughnut",
+          data: {
+            labels: bdLabels,
+            datasets: [{ data: bdValues, backgroundColor: bdColors }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: `Fördelning ${latest.year} (${latest.attendees} deltagare)`,
+              },
+              legend: { position: "bottom" },
+            },
+          },
+        });
+
+        // Summering
+        const totalAll = estimates.reduce((s, e) => s + e.total, 0);
+        document.getElementById("economyNote").innerHTML =
+          `📈 <strong>Senaste Mensa SWAG (${latest.year}):</strong> ~${(latest.total / 1000000).toFixed(1)} MSEK total uppskattad omsättning. Per person: ~${latest.perPerson.toLocaleString("sv-SE")} SEK. <strong>Totalt sedan 2004:</strong> ~${(totalAll / 1000000).toFixed(1)} MSEK. <em>Modell baserad på hotellpris som proxy för prisnivå, normalfördelad spridning.</em>`;
+      }
+
+      // ============================================================
       // KARTA - inzoomad till Sverige, fargkodad, med slider
       // ============================================================
       let mapInstance = null;
@@ -1932,13 +2229,13 @@
 
         // SWAG fun facts
         const swagFacts = [
-          `${totalAttendees.toLocaleString("sv-SE")} totala SWAG-deltagare genom åren`,
+          `${totalAttendees.toLocaleString("sv-SE")} totala Mensa SWAG-deltagare genom åren`,
           `${uniqueLocations} unika platser`,
           `+${memberGrowth.toLocaleString("sv-SE")} medlemmar sedan starten`,
           `Rum 107 föddes i Örebro 2014`,
-          `SWAG 2017: Polisen kallades till festen`,
+          `Mensa SWAG 2017: Polisen kallades till festen`,
           `Siljansnäs 2011: Mångas favorit`,
-          `Första SWAG: 4 deltagare (1995)`,
+          `Första Mensa SWAG: 4 deltagare (1995)`,
         ];
 
         document.getElementById("funFactsSwag").innerHTML = swagFacts
@@ -2028,6 +2325,8 @@
       renderHalfSwagChart();
       renderHalfVsFullChart();
       renderForecast();
+      renderArrivalDeparture();
+      renderEconomyCharts();
       renderMap();
       setupMapSliders();
       renderFunFacts();
