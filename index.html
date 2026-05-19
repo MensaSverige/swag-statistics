@@ -1934,6 +1934,28 @@
         const dateOpts = { day: "numeric", month: "long" };
         const swagDateStr = `${swagStart.toLocaleDateString("sv-SE", dateOpts)} – ${swagEnd.toLocaleDateString("sv-SE", dateOpts)}`;
 
+        // Ekonomisk prognos för nästa SWAG
+        // Uppskatta hotellpris via trend från senaste åren med hotelPrice
+        const hotelYears = DATA.filter(
+          (d) => d.hotelPrice && d.year >= 2010,
+        ).map((d) => [d.year, d.hotelPrice]);
+        const hotelReg = linearRegression(hotelYears);
+        const lastHotelPrice = hotelYears[hotelYears.length - 1][1];
+        const predHotel = Math.max(
+          lastHotelPrice,
+          Math.round(hotelReg.slope * nextSwag.year + hotelReg.intercept),
+        );
+        const foodFactor = predHotel / 1350;
+        const predAccom = predHotel * 3.5 * (0.7 * 0.5 + 0.3 * 1.0);
+        const predFood = (450 * 4 + 100) * foodFactor;
+        const predDrinkAlc = 0.7 * 3 * (95 * foodFactor) * 4;
+        const predDrinkSoft = 0.3 * 2 * (45 * foodFactor) * 4;
+        const predDrink = predDrinkAlc + predDrinkSoft;
+        const predActivities = 700 * foodFactor;
+        const predPerPerson = predAccom + predFood + predDrink + predActivities;
+        const predConfCost = CONFERENCE_COST[nextSwag.year] || 300000;
+        const predEconTotal = predPerPerson * predAtt + predConfCost;
+
         document.getElementById("forecastText").innerHTML = `
         <div style="padding:1rem;">
             <h3 style="color:var(--primary);margin-bottom:0.5rem;">Mensa SWAG ${nextSwag.year} – ${nextSwag.location}</h3>
@@ -1941,6 +1963,8 @@
             <p><strong>Uppskattade deltagare:</strong> ~${predAtt.toLocaleString("sv-SE")}</p>
             <p><strong>Uppskattade medlemmar:</strong> ~${predMem.toLocaleString("sv-SE")}</p>
             <p><strong>Förväntad deltagarandel:</strong> ~${predPct}%</p>
+            <p><strong>Uppskattad ekonomisk omsättning:</strong> ~${(predEconTotal / 1000000).toFixed(1)} MSEK</p>
+            <p style="color:var(--muted);font-size:0.85rem;">(~${Math.round(predPerPerson).toLocaleString("sv-SE")} SEK/person, hotellpris-trend ~${predHotel} SEK/natt)</p>
             <p style="margin-top:0.8rem;color:var(--muted);font-size:0.85rem;">Baserat på linjär trend sedan 2010 (exkl. pandemiår).</p>
         </div>`;
       }
