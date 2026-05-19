@@ -25,6 +25,13 @@
          { year: YYYY, members: XXXX, attendees: 0, location: null, comment: "INSTÄLLT (anledning)", cancelled: true },
      - Inställda år exkluderas automatiskt från trendberäkningar.
 
+  4. ½SWAG (HALVÅRSTRÄFFEN)
+     - Sök efter "const HALF_SWAG = [" nedan.
+     - Lägg till/uppdatera raden för aktuellt år:
+         { year: 2027, attendees: XXX, location: "Stad", swagYear: 2028 },
+     - year = året ½SWAG hålls (november)
+     - swagYear = SWAG-året den rekar för (året efter)
+
   SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
   "Senast uppdaterad" i footern beräknas automatiskt från senaste året med komplett data.
   Slider min/max på kartan beräknas automatiskt från DATA.
@@ -379,8 +386,8 @@
         </div>
       </div>
 
-      <!-- Fun facts -->
-      <div class="fun-facts" id="funFacts"></div>
+      <!-- Fun facts: SWAG -->
+      <div class="fun-facts" id="funFactsSwag"></div>
 
       <!-- Medlemsutveckling -->
       <div class="section">
@@ -397,7 +404,7 @@
         <div class="chart-container chart-medium">
           <canvas id="growthChart"></canvas>
         </div>
-        <div class="highlight-box" id="growthNote"></div>
+        <div class="trend-box" id="growthNote"></div>
       </div>
 
       <!-- Deltagare + Procent -->
@@ -423,7 +430,7 @@
           <div class="chart-container chart-medium">
             <canvas id="percentChart"></canvas>
           </div>
-          <div class="highlight-box" id="percentNote"></div>
+          <div class="trend-box" id="percentNote"></div>
         </div>
       </div>
 
@@ -442,6 +449,43 @@
           </div>
         </div>
       </div>
+
+      <!-- ½SWAG -->
+      <div class="grid-2">
+        <div class="section">
+          <h2>Mensa Halvårsträff – deltagare</h2>
+          <p
+            style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem"
+          >
+            Halvårsträffen hålls tredje helgen i november (fre–sön) på nästa års
+            SWAG-ort för att reka och bygga förväntningar.
+          </p>
+          <div class="chart-container chart-medium">
+            <canvas id="halfSwagChart"></canvas>
+          </div>
+          <div class="highlight-box">
+            📝 Tidiga siffror (2017–2021) är ungefärliga uppskattningar. 2020
+            var digitalt (Halvhöstårsfestträff via Zoom + fysisk middag i
+            Stockholm).
+          </div>
+          <div class="trend-box" id="halfSwagTrend"></div>
+        </div>
+        <div class="section">
+          <h2>Halvårsträff som andel av SWAG (%)</h2>
+          <p
+            style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem"
+          >
+            Halvårsträff-deltagare jämfört med SWAG året efter på samma ort.
+          </p>
+          <div class="chart-container chart-medium">
+            <canvas id="halfVsFullChart"></canvas>
+          </div>
+          <div class="trend-box" id="halfVsFullTrend"></div>
+        </div>
+      </div>
+
+      <!-- Fun facts: Halvårsträff -->
+      <div class="fun-facts" id="funFactsHalf"></div>
 
       <!-- Prognos -->
       <div class="section">
@@ -575,8 +619,9 @@
               <tr>
                 <th>År</th>
                 <th>Medlemmar</th>
-                <th>Deltagare</th>
-                <th>Plats</th>
+                <th>SWAG</th>
+                <th>Halvårsträff</th>
+                <th>Plats (SWAG)</th>
                 <th>Kommentar</th>
               </tr>
             </thead>
@@ -939,6 +984,54 @@
         },
       ];
 
+      // ============================================================
+      // ½SWAG DATA – Halvårsträffen (november, inför nästa års SWAG-ort)
+      // Format: { year: år ½SWAG hölls, attendees, location, swagYear: SWAG-året den rekar för }
+      // ============================================================
+      const HALF_SWAG = [
+        {
+          year: 2017,
+          attendees: 23,
+          location: "Linköping",
+          swagYear: 2018,
+          comment: "Premiär – ungefärlig siffra",
+        },
+        {
+          year: 2018,
+          attendees: 80,
+          location: "Uppsala",
+          swagYear: 2019,
+          comment: "Uppskattning (50–80 deltagare, ingen föranmälan krävdes)",
+        },
+        {
+          year: 2019,
+          attendees: 85,
+          location: "Sundsvall",
+          swagYear: 2020,
+          comment: "Uppskattning (~80–90)",
+        },
+        {
+          year: 2020,
+          attendees: null,
+          location: "Online/Stockholm",
+          swagYear: 2021,
+          comment: "Halvhöstårsfestträff – digitalt + 23 fysiskt i Sthlm",
+          cancelled: true,
+        },
+        {
+          year: 2021,
+          attendees: 35,
+          location: "Sundsvall",
+          swagYear: 2022,
+          comment: "Covid-begränsat (~30–40)",
+        },
+        { year: 2022, attendees: 110, location: "Malmö", swagYear: 2023 },
+        { year: 2023, attendees: 233, location: "Örebro", swagYear: 2024 },
+        { year: 2024, attendees: 145, location: "Visby", swagYear: 2025 },
+        { year: 2025, attendees: 240, location: "Jönköping", swagYear: 2026 },
+        { year: 2026, attendees: null, location: "Borås", swagYear: 2027 },
+      ];
+
       const COORDS = {
         "Lohärad-Råby": [59.72, 18.55],
         Göteborg: [57.7089, 11.9746],
@@ -961,6 +1054,7 @@
         Uppsala: [59.8586, 17.6389],
         Sundsvall: [62.3908, 17.3069],
         Visby: [57.6348, 18.2948],
+        Gotland: [57.6348, 18.2948],
         Borås: [57.721, 12.9401],
       };
 
@@ -1321,7 +1415,7 @@
         const latest = pcts[pcts.length - 1];
         const trendDir = pctReg.slope > 0 ? "uppåt" : "nedåt";
         document.getElementById("percentNote").innerHTML =
-          `Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste året: <strong>${latest}%</strong>. Trend: <strong>${trendDir}</strong> (${pctReg.slope > 0 ? "+" : ""}${pctReg.slope.toFixed(2)} procentenheter/år).`;
+          `📈 Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste året: <strong>${latest}%</strong>. Trend: <strong>${trendDir}</strong> (${pctReg.slope > 0 ? "+" : ""}${pctReg.slope.toFixed(2)} procentenheter/år). <em>(R² = ${pctReg.r2.toFixed(3)})</em>`;
       }
 
       // ============================================================
@@ -1372,7 +1466,7 @@
         const maxGrowth = Math.max(...growthData.map((v) => parseFloat(v)));
         const maxYear = labels[growthData.indexOf(maxGrowth.toFixed(1))];
         document.getElementById("growthNote").innerHTML =
-          `${positive} år med tillväxt, ${negative} år med minskning. Högsta tillväxt: <strong>${maxGrowth.toFixed(1)}%</strong> (${maxYear}). Negativ tillväxt = fler som lämnar än som går med.`;
+          `📈 ${positive} år med tillväxt, ${negative} år med minskning. Högsta tillväxt: <strong>${maxGrowth.toFixed(1)}%</strong> (${maxYear}). Negativ tillväxt = fler som lämnar än som går med.`;
       }
 
       // ============================================================
@@ -1439,6 +1533,162 @@
             scales: { y: { min: 0 } },
           },
         });
+      }
+
+      // ============================================================
+      // ½SWAG
+      // ============================================================
+      function renderHalfSwagChart() {
+        const valid = HALF_SWAG.filter(
+          (d) => d.attendees != null && d.attendees > 0 && !d.cancelled,
+        );
+        if (valid.length === 0) return;
+
+        const labels = valid.map((d) => `${d.year}`);
+        const values = valid.map((d) => d.attendees);
+
+        // Trend om vi har minst 2 datapunkter
+        const points = valid.map((d) => [d.year, d.attendees]);
+        const reg = linearRegression(points);
+        const trendData = valid.map((d) => Math.max(0, forecast(reg, d.year)));
+
+        const datasets = [
+          {
+            label: "Mensa Halvårsträff deltagare",
+            data: values,
+            backgroundColor: "rgba(124,77,255,0.7)",
+            borderRadius: 4,
+          },
+        ];
+        if (points.length >= 2) {
+          datasets.push({
+            label: "Trend (linjär)",
+            data: trendData,
+            type: "line",
+            borderColor: "#ffc107",
+            borderDash: [6, 3],
+            pointRadius: 0,
+            fill: false,
+          });
+        }
+
+        new Chart(document.getElementById("halfSwagChart"), {
+          type: "bar",
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              title: { display: false },
+            },
+            scales: {
+              y: { min: 0 },
+              x: { ticks: { maxRotation: 45, minRotation: 45 } },
+            },
+          },
+        });
+
+        // Trend-text
+        if (points.length >= 2) {
+          document.getElementById("halfSwagTrend").innerHTML =
+            `📈 <strong>Trend (linjär, alla år exkl. pandemi):</strong> ~${Math.round(reg.slope)} fler deltagare/år. <em>(R² = ${reg.r2.toFixed(3)})</em>`;
+        }
+      }
+
+      function renderHalfVsFullChart() {
+        // Jämför ½SWAG med SWAG året efter – i procent (½SWAG / SWAG * 100)
+        const pairs = HALF_SWAG.filter(
+          (d) => d.attendees != null && d.attendees > 0 && !d.cancelled,
+        )
+          .map((h) => {
+            const fullSwag = DATA.find(
+              (d) =>
+                d.year === h.swagYear &&
+                d.attendees &&
+                d.attendees > 0 &&
+                !d.cancelled,
+            );
+            return {
+              halfYear: h.year,
+              halfAtt: h.attendees,
+              halfLoc: h.location,
+              fullYear: h.swagYear,
+              fullAtt: fullSwag ? fullSwag.attendees : null,
+              fullLoc: fullSwag ? fullSwag.location : "?",
+            };
+          })
+          .filter((p) => p.fullAtt != null);
+
+        if (pairs.length === 0) {
+          document.getElementById("halfVsFullChart").parentElement.innerHTML =
+            '<p style="color:var(--muted);text-align:center;padding:2rem;">Inte tillräckligt med data för jämförelse ännu.</p>';
+          return;
+        }
+
+        const labels = pairs.map((p) => `${p.fullYear}`);
+        const pctData = pairs.map((p) =>
+          ((p.halfAtt / p.fullAtt) * 100).toFixed(1),
+        );
+
+        // Trendlinje
+        const pctPoints = pairs.map((p, i) => [
+          i,
+          (p.halfAtt / p.fullAtt) * 100,
+        ]);
+        const pctReg = linearRegression(pctPoints);
+        const trendData = pctPoints.map(([x]) =>
+          Math.max(0, pctReg.slope * x + pctReg.intercept).toFixed(1),
+        );
+
+        const datasets = [
+          {
+            label: "Halvårsträff som % av SWAG",
+            data: pctData,
+            borderColor: "#7c4dff",
+            backgroundColor: "rgba(124,77,255,0.1)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+          },
+        ];
+        if (pctPoints.length >= 2) {
+          datasets.push({
+            label: "Trend (linjär)",
+            data: trendData,
+            borderColor: "#ffc107",
+            borderDash: [6, 3],
+            pointRadius: 0,
+            fill: false,
+          });
+        }
+
+        new Chart(document.getElementById("halfVsFullChart"), {
+          type: "line",
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: { display: false },
+              legend: { position: "bottom" },
+            },
+            scales: {
+              y: { min: 0, title: { display: true, text: "%" } },
+              x: {},
+            },
+          },
+        });
+
+        // Trend-text
+        if (pctPoints.length >= 2) {
+          const avgPct = (
+            pctData.reduce((s, v) => s + parseFloat(v), 0) / pctData.length
+          ).toFixed(1);
+          const trendDir = pctReg.slope > 0 ? "uppåt" : "nedåt";
+          document.getElementById("halfVsFullTrend").innerHTML =
+            `📈 <strong>Snitt:</strong> halvårsträffen samlar ~${avgPct}% av SWAG-deltagarna. Trend: <strong>${trendDir}</strong>. <em>(R² = ${pctReg.r2.toFixed(3)})</em>`;
+        }
       }
 
       // ============================================================
@@ -1680,19 +1930,52 @@
           DATA.filter((d) => d.members).slice(-1)[0].members -
           DATA.filter((d) => d.members)[0].members;
 
-        const facts = [
-          `${totalAttendees.toLocaleString("sv-SE")} totala SWAG-deltagare genom \u00e5ren`,
+        // SWAG fun facts
+        const swagFacts = [
+          `${totalAttendees.toLocaleString("sv-SE")} totala SWAG-deltagare genom åren`,
           `${uniqueLocations} unika platser`,
           `+${memberGrowth.toLocaleString("sv-SE")} medlemmar sedan starten`,
           `Rum 107 föddes i Örebro 2014`,
           `SWAG 2017: Polisen kallades till festen`,
           `Siljansnäs 2011: Mångas favorit`,
-          `Halvårs-SWAG sedan 2017 – reka inför nästa ort`,
-          `½SWAG inför Örebro 2024: 250+ pers (större än SWAG Kosta 2015!)`,
           `Första SWAG: 4 deltagare (1995)`,
         ];
 
-        document.getElementById("funFacts").innerHTML = facts
+        document.getElementById("funFactsSwag").innerHTML = swagFacts
+          .map((f) => `<span class="fun-fact">${f}</span>`)
+          .join("");
+
+        // Halvårsträff fun facts
+        const halfValid = HALF_SWAG.filter(
+          (d) => d.attendees != null && d.attendees > 0 && !d.cancelled,
+        );
+        const halfTotal = halfValid.reduce((s, d) => s + d.attendees, 0);
+        const halfMax = halfValid.reduce(
+          (max, d) => (d.attendees > max.attendees ? d : max),
+          { attendees: 0 },
+        );
+        const halfGrowth =
+          halfValid.length >= 2
+            ? Math.round(
+                (halfValid[halfValid.length - 1].attendees /
+                  halfValid[0].attendees -
+                  1) *
+                  100,
+              )
+            : 0;
+        const halfFacts = [
+          `Mensa Halvårsträff sedan 2017 – reka inför nästa ort`,
+          `${halfTotal.toLocaleString("sv-SE")} totala halvårsträff-deltagare`,
+          halfMax.attendees > 0
+            ? `Rekord: ${halfMax.location} ${halfMax.year} (${halfMax.attendees} pers)`
+            : null,
+          halfValid.length >= 2
+            ? `Från ${halfValid[0].attendees} till ${halfValid[halfValid.length - 1].attendees} deltagare (+${halfGrowth}%)`
+            : null,
+          `Halvårsträff Örebro 2023: större än SWAG Kosta 2015!`,
+        ].filter(Boolean);
+
+        document.getElementById("funFactsHalf").innerHTML = halfFacts
           .map((f) => `<span class="fun-fact">${f}</span>`)
           .join("");
       }
@@ -1706,12 +1989,27 @@
           .reverse()
           .map((d) => {
             const cls = d.cancelled ? ' class="cancelled"' : "";
+            const half = HALF_SWAG.find((h) => h.swagYear === d.year);
+            const halfStr = half
+              ? half.attendees != null
+                ? half.attendees.toLocaleString("sv-SE")
+                : half.cancelled
+                  ? "Digitalt"
+                  : "?"
+              : "";
+            const halfComment = half && half.comment ? half.comment : "";
+            const swagComment = d.comment || "";
+            // Kombinera kommentarer
+            const comments = [swagComment, halfComment]
+              .filter(Boolean)
+              .join(" | ");
             return `<tr${cls}>
             <td>${d.year}</td>
             <td>${d.members != null ? d.members.toLocaleString("sv-SE") : "\u2013"}</td>
             <td>${d.attendees != null ? (d.attendees === 0 && d.cancelled ? "\u2013" : d.attendees.toLocaleString("sv-SE")) : "\u2013"}</td>
+            <td>${halfStr || "\u2013"}</td>
             <td>${d.location || "\u2013"}</td>
-            <td>${d.comment || ""}</td>
+            <td>${comments}</td>
         </tr>`;
           })
           .join("");
@@ -1727,6 +2025,8 @@
       renderGrowthChart();
       renderTop5();
       renderRecent5();
+      renderHalfSwagChart();
+      renderHalfVsFullChart();
       renderForecast();
       renderMap();
       setupMapSliders();
