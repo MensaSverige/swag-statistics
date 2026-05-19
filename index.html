@@ -2058,20 +2058,25 @@
         const hotelBase = d.hotelPrice || 1200;
         const confCost = CONFERENCE_COST[year] || 250000;
 
-        // Boende: snitt 3.5 nätter, normalfördelning kring hotellpris
-        // ~70% bor på hotell (standardrum), ~15% billigare (vandrarhem/tält), ~15% dyrare (suite/uppgradering)
-        const avgAccom = hotelBase * 3.5 * 0.85; // justerat för mix
+        // Boende: snitt 3.5 nätter, dubbelrum (standardpris = hotelBase)
+        // ~70% delar rum (halva priset), ~30% bor ensamma (fullt pris)
+        // Övrig mix: ~15% billigare (vandrarhem/tält), ~15% dyrare (suite) – tar ut varandra
+        const avgAccom = hotelBase * 3.5 * (0.7 * 0.5 + 0.3 * 1.0); // 70% delar, 30% ensamma
 
-        // Mat: ~4 dagar, snitt 500 SEK/dag + 150 extra lördagen (bankett/buffé/utekvällar)
+        // Mat: ~4 dagar, snitt 450 SEK/dag + 100 extra lördagen (bankett/buffé)
         // Frukost ingår normalt i hotellpriset (historiskt), exkl. från ~2025+
         const foodFactor = hotelBase / 1350; // skala med hotellpris som proxy för prisnivå
-        const avgFood = (500 * 4 + 150) * foodFactor;
+        const avgFood = (450 * 4 + 100) * foodFactor;
 
-        // Dryck: 70% dricker, snitt 2.5 drinkar/kväll à 93 SEK (bas), 4 kvällar
-        const avgDrink = 0.7 * 2.5 * (93 * foodFactor) * 4;
+        // Dryck: alla dricker något (alkohol, läsk, kaffe etc.)
+        // 70% dricker alkohol (snitt 3/kväll à 95 SEK), 30% alkoholfritt (snitt 2/kväll à 45 SEK)
+        // 4 kvällar
+        const avgDrinkAlcohol = 0.7 * 3 * (95 * foodFactor) * 4;
+        const avgDrinkSoft = 0.3 * 2 * (45 * foodFactor) * 4;
+        const avgDrink = avgDrinkAlcohol + avgDrinkSoft;
 
-        // Aktiviteter & shopping: snitt 500 SEK per person (2024-priser skalat)
-        const avgActivities = 500 * foodFactor;
+        // Aktiviteter, shopping & transport: snitt 700 SEK per person (taxi, utflykter, merch etc.)
+        const avgActivities = 700 * foodFactor;
 
         // Per person totalt
         const perPerson = avgAccom + avgFood + avgDrink + avgActivities;
@@ -2175,8 +2180,43 @@
                 text: `Fördelning ${latest.year} (${latest.attendees} deltagare)`,
               },
               legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    const total = context.dataset.data.reduce(
+                      (a, b) => a + b,
+                      0,
+                    );
+                    const pct = ((context.raw / total) * 100).toFixed(1);
+                    return `${context.label}: ${pct}% (${Math.round(context.raw / 1000)} tkr)`;
+                  },
+                },
+              },
+              datalabels: undefined,
             },
           },
+          plugins: [
+            {
+              id: "doughnutPercentLabels",
+              afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const dataset = chart.data.datasets[0];
+                const total = dataset.data.reduce((a, b) => a + b, 0);
+                chart.getDatasetMeta(0).data.forEach((arc, i) => {
+                  const pct = ((dataset.data[i] / total) * 100).toFixed(0);
+                  if (pct < 5) return; // skip tiny slices
+                  const { x, y } = arc.tooltipPosition();
+                  ctx.save();
+                  ctx.fillStyle = "#fff";
+                  ctx.font = "bold 12px sans-serif";
+                  ctx.textAlign = "center";
+                  ctx.textBaseline = "middle";
+                  ctx.fillText(`${pct}%`, x, y);
+                  ctx.restore();
+                });
+              },
+            },
+          ],
         });
 
         // Summering
