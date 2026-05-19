@@ -541,6 +541,19 @@
         <div class="trend-box" id="growthNote"></div>
       </div>
 
+      <!-- Mensa-penetration -->
+      <div class="section">
+        <h2>Mensa-penetration (andel av möjliga medlemmar)</h2>
+        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
+          Mensa-medlemmar som andel av 2% av Sveriges befolkning (den andel som
+          kvalificerar sig).
+        </p>
+        <div class="chart-container chart-medium">
+          <canvas id="penetrationChart"></canvas>
+        </div>
+        <div class="trend-box" id="penetrationNote"></div>
+      </div>
+
       <!-- Deltagare + Procent -->
       <div class="grid-2">
         <div class="section">
@@ -1656,6 +1669,122 @@
       }
 
       // ============================================================
+      // MENSA-PENETRATION (andel av kvalificerade)
+      // ============================================================
+      // Sveriges befolkning per år (källa: SCB, interpolerat)
+      const SWEDEN_POP = {
+        1995: 8878000,
+        1996: 8887000,
+        1997: 8896000,
+        1998: 8905000,
+        1999: 8915000,
+        2000: 8924000,
+        2001: 8956000,
+        2002: 8988000,
+        2003: 9020000,
+        2004: 9052000,
+        2005: 9083000,
+        2006: 9113000,
+        2007: 9183000,
+        2008: 9253000,
+        2009: 9340000,
+        2010: 9432000,
+        2011: 9516000,
+        2012: 9600000,
+        2013: 9689000,
+        2014: 9780000,
+        2015: 9839000,
+        2016: 9923000,
+        2017: 10058000,
+        2018: 10175000,
+        2019: 10279000,
+        2020: 10383000,
+        2021: 10452000,
+        2022: 10522000,
+        2023: 10552000,
+        2024: 10605000,
+        2025: 10657000,
+        2026: 10701000,
+      };
+
+      function renderPenetrationChart() {
+        const valid = DATA.filter(
+          (d) =>
+            d.year >= STAT_START_YEAR &&
+            d.members != null &&
+            SWEDEN_POP[d.year],
+        );
+        const labels = valid.map((d) => d.year);
+        // 2% av befolkningen = potentiella medlemmar
+        const pctData = valid.map((d) =>
+          ((d.members / (SWEDEN_POP[d.year] * 0.02)) * 100).toFixed(2),
+        );
+
+        // Trendlinje + prognos 4 år framåt
+        const points = valid.map((d) => [
+          d.year,
+          (d.members / (SWEDEN_POP[d.year] * 0.02)) * 100,
+        ]);
+        const reg = linearRegression(points);
+
+        const lastYear = valid[valid.length - 1].year;
+        const forecastYears = [];
+        for (let y = lastYear + 1; y <= lastYear + 4; y++)
+          forecastYears.push(y);
+
+        const allLabels = [...labels, ...forecastYears];
+        const allActual = [...pctData, ...forecastYears.map(() => null)];
+        const allTrend = allLabels.map((y) =>
+          Math.max(0, reg.slope * y + reg.intercept).toFixed(2),
+        );
+
+        new Chart(document.getElementById("penetrationChart"), {
+          type: "line",
+          data: {
+            labels: allLabels,
+            datasets: [
+              {
+                label: "% av kvalificerade som är medlemmar",
+                data: allActual,
+                borderColor: "#2e7d32",
+                backgroundColor: "rgba(46,125,50,0.1)",
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                spanGaps: false,
+              },
+              {
+                label: "Trend (linjär)",
+                data: allTrend,
+                borderColor: "#ffc107",
+                borderDash: [6, 3],
+                pointRadius: 0,
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } },
+            scales: {
+              y: { min: 0, title: { display: true, text: "%" } },
+              x: { ticks: { maxRotation: 45, minRotation: 45 } },
+            },
+          },
+        });
+
+        const latest = pctData[pctData.length - 1];
+        const latestYear = labels[labels.length - 1];
+        const latestPotential = Math.round(SWEDEN_POP[latestYear] * 0.02);
+        const forecast4 = (reg.slope * (lastYear + 4) + reg.intercept).toFixed(
+          2,
+        );
+        document.getElementById("penetrationNote").innerHTML =
+          `📈 <strong>${latestYear}:</strong> ${latest}% av de ~${latestPotential.toLocaleString("sv-SE")} som kvalificerar sig (2% av ${(SWEDEN_POP[latestYear] / 1000000).toFixed(1)}M) är Mensa-medlemmar. Prognos ${lastYear + 4}: ~${forecast4}%. Trend: <strong>${reg.slope > 0 ? "uppåt" : "nedåt"}</strong>. <em>(R² = ${reg.r2.toFixed(3)})</em>`;
+      }
+
+      // ============================================================
       // TOP 5 & SENASTE 5
       // ============================================================
       function renderTop5() {
@@ -2535,6 +2664,7 @@
       renderAttendeesChart();
       renderPercentChart();
       renderGrowthChart();
+      renderPenetrationChart();
       renderTop5();
       renderRecent5();
       renderHalfSwagChart();
