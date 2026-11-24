@@ -317,6 +317,9 @@
         --primary: #5c6bc0;
         --primary-light: #7986cb;
       }
+      body.dark .map-tiles {
+        filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+      }
       body.dark header {
         background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
       }
@@ -700,7 +703,7 @@
             step="1"
           />
           <label>till:</label>
-          <span class="year-display" id="mapYearMax">2027</span>
+          <span class="year-display" id="mapYearMax">2028</span>
           <input
             type="range"
             id="mapSliderMax"
@@ -785,7 +788,7 @@
 
       <!-- Tabell -->
       <div class="section">
-        <h2>All data (1981–2027)</h2>
+        <h2>All data (1981–2028)</h2>
         <p
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
         >
@@ -1181,6 +1184,13 @@
           location: "Borås",
           comment: null,
         },
+        {
+          year: 2028,
+          members: null,
+          attendees: null,
+          location: "Umeå",
+          comment: null,
+        },
       ];
 
       // ============================================================
@@ -1228,7 +1238,7 @@
         { year: 2023, attendees: 233, location: "Örebro", swagYear: 2024 },
         { year: 2024, attendees: 145, location: "Visby", swagYear: 2025 },
         { year: 2025, attendees: 240, location: "Jönköping", swagYear: 2026 },
-        { year: 2026, attendees: null, location: "Borås", swagYear: 2027 },
+        { year: 2026, attendees: 221, location: "Borås", swagYear: 2027 },
       ];
 
       const COORDS = {
@@ -1255,6 +1265,7 @@
         Visby: [57.6348, 18.2948],
         Gotland: [57.6348, 18.2948],
         Borås: [57.721, 12.9401],
+        Umeå: [63.8258, 20.263],
       };
 
       // ============================================================
@@ -2388,7 +2399,7 @@
 
       function renderMap(minYear, maxYear) {
         if (!minYear) minYear = 1995;
-        if (!maxYear) maxYear = 2027;
+        if (!maxYear) maxYear = 2028;
 
         if (!mapInstance) {
           mapInstance = L.map("map").setView([62.0, 15.5], 5);
@@ -2397,14 +2408,13 @@
             [70.0, 25.0],
           ]);
           mapInstance.setMinZoom(4);
-          const isDarkMode = document.body.classList.contains("dark");
-          const tileUrl = isDarkMode
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-          L.tileLayer(tileUrl, {
+          // OSM-plattor för båda lägena (CARTO kräver numera API-nyckel).
+          // Mörkt läge görs med CSS-filter på .map-tiles.
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution:
-              '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+              '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
             maxZoom: 12,
+            className: "map-tiles",
           }).addTo(mapInstance);
         }
 

@@ -8,7 +8,7 @@ Infografiksida för Mensa Sveriges årsträff (Mensa SWAG) och halvårsträff. V
 
 - En enda `index.html` – ingen build, inga beroenden att installera
 - Chart.js (CDN) för grafer
-- Leaflet + OpenStreetMap/CARTO (CDN) för karta
+- Leaflet + OpenStreetMap-plattor (CDN) för karta. Mörkt läge görs med CSS-filter, så ingen API-nyckel behövs.
 - Ren JavaScript, ingen framework
 - Dark mode med localStorage
 - Alla beräkningar (trender, prognoser, datum) sker dynamiskt vid sidladdning
