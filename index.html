@@ -2655,12 +2655,17 @@
       // ============================================================
 
       // Apply dark mode BEFORE rendering (charts + map need this)
+      // Utan sparat val följer sidan enhetens tema. Ett sparat val som
+      // ändå matchar enheten raderas, så att sidan börjar följa enheten igen.
+      const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       (function () {
-        const saved = localStorage.getItem("darkMode");
-        const prefersDark = window.matchMedia(
-          "(prefers-color-scheme: dark)",
-        ).matches;
-        const isDark = saved === "true" || (!saved && prefersDark);
+        let saved = localStorage.getItem("darkMode");
+        const prefersDark = darkMediaQuery.matches;
+        if (saved !== null && (saved === "true") === prefersDark) {
+          localStorage.removeItem("darkMode");
+          saved = null;
+        }
+        const isDark = saved === null ? prefersDark : saved === "true";
         if (isDark) {
           document.body.classList.add("dark");
           document.getElementById("darkModeToggle").textContent = "☀️ Ljust";
@@ -2825,9 +2830,19 @@
         document.body.classList.toggle("dark");
         const isDark = document.body.classList.contains("dark");
         darkToggle.textContent = isDark ? "☀️ Ljust" : "🌙 Mörkt";
-        localStorage.setItem("darkMode", isDark);
+        // Spara bara om valet avviker från enhetens tema
+        if (isDark === darkMediaQuery.matches) {
+          localStorage.removeItem("darkMode");
+        } else {
+          localStorage.setItem("darkMode", isDark);
+        }
         // Reload page to re-render charts and map with correct colors
         location.reload();
+      });
+
+      // Följ enhetens tema live om användaren inte gjort ett eget val
+      darkMediaQuery.addEventListener("change", () => {
+        if (localStorage.getItem("darkMode") === null) location.reload();
       });
     </script>
   </body>
