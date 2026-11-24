@@ -363,19 +363,29 @@
         margin: 0.5rem 0 1rem;
         flex-wrap: wrap;
       }
+      /* Etikett, år och reglage hålls ihop; grupperna bryts till egna rader
+         på smala skärmar */
+      .slider-group {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex: 1 1 280px;
+        min-width: 0;
+      }
       .slider-container input[type="range"] {
         flex: 1;
-        min-width: 200px;
+        min-width: 0;
       }
       .slider-container label {
         font-size: 0.9rem;
         color: var(--muted);
+        min-width: 4.5rem;
       }
       .slider-container .year-display {
         font-weight: 700;
         color: var(--primary);
         font-size: 1.1rem;
-        min-width: 90px;
+        min-width: 3rem;
       }
       footer {
         text-align: center;
@@ -551,24 +561,21 @@
       }
 
       /* Kartlegend */
+      /* Färgförklaring: en kompakt rad direkt under kartan */
       .map-legend {
-        background: var(--card);
-        color: var(--text);
-        padding: 0.5rem 0.7rem;
-        border-radius: 6px;
-        box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
-        font-size: 0.75rem;
-        line-height: 1.4;
-        min-width: 150px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        color: var(--muted);
+        font-size: 0.8rem;
       }
       .map-legend .bar {
+        width: 160px;
+        max-width: 40vw;
         height: 10px;
         border-radius: 3px;
-        margin: 0.2rem 0;
-      }
-      .map-legend .ends {
-        display: flex;
-        justify-content: space-between;
       }
       .map-legend .dot {
         display: inline-block;
@@ -959,15 +966,27 @@
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.3rem"
         >
           Färgerna visar kronologisk ordning: blått (tidigt) → orange (senast),
-          se förklaringen i kartans hörn. Klicka på en punkt för detaljer.
+          se förklaringen under kartan. Klicka på en punkt för detaljer.
         </p>
         <div class="slider-container">
-          <label for="mapSliderMin">Visa från:</label>
-          <span class="year-display" id="mapYearMin" aria-hidden="true"></span>
-          <input type="range" id="mapSliderMin" step="1" />
-          <label for="mapSliderMax">till:</label>
-          <span class="year-display" id="mapYearMax" aria-hidden="true"></span>
-          <input type="range" id="mapSliderMax" step="1" />
+          <div class="slider-group">
+            <label for="mapSliderMin">Visa från:</label>
+            <span
+              class="year-display"
+              id="mapYearMin"
+              aria-hidden="true"
+            ></span>
+            <input type="range" id="mapSliderMin" step="1" />
+          </div>
+          <div class="slider-group">
+            <label for="mapSliderMax">till:</label>
+            <span
+              class="year-display"
+              id="mapYearMax"
+              aria-hidden="true"
+            ></span>
+            <input type="range" id="mapSliderMax" step="1" />
+          </div>
         </div>
         <p
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
@@ -979,6 +998,7 @@
           role="region"
           aria-label="Karta över Sverige med orterna för Mensa SWAG"
         ></div>
+        <div class="map-legend" id="mapLegend"></div>
       </div>
 
       <!-- Mensapristagare -->
@@ -2886,7 +2906,6 @@
       let mapInstance = null;
       let mapMarkers = [];
       let mapLine = null;
-      let mapLegend = null;
       let updateMap = null; // sätts av setupMapSliders
 
       function renderMapLegend(withLoc) {
@@ -2901,10 +2920,11 @@
         const hasCancelled = withLoc.some((d) => d.cancelled);
         const stops = [0, 0.5, 1].map((r) => yearColor(r * 100, 100));
         el.innerHTML = `
-          <strong>År</strong>
-          <div class="bar" style="background:linear-gradient(90deg,${stops.join(",")})"></div>
-          <div class="ends"><span>${first}</span><span>${last}</span></div>
-          ${hasCancelled ? '<div style="margin-top:0.3rem"><span class="dot" style="background:#c62828"></span>Inställd</div>' : ""}`;
+          <strong>År:</strong>
+          <span>${first}</span>
+          <span class="bar" style="background:linear-gradient(90deg,${stops.join(",")})"></span>
+          <span>${last}</span>
+          ${hasCancelled ? '<span><span class="dot" style="background:#c62828"></span>Inställd</span>' : ""}`;
       }
 
       function renderMap(minYear, maxYear) {
@@ -2926,15 +2946,6 @@
             maxZoom: 12,
             className: "map-tiles",
           }).addTo(mapInstance);
-
-          // Färgförklaring i kartans hörn
-          mapLegend = L.control({ position: "bottomright" });
-          mapLegend.onAdd = () => {
-            const div = L.DomUtil.create("div", "map-legend");
-            div.id = "mapLegend";
-            return div;
-          };
-          mapLegend.addTo(mapInstance);
         }
 
         // Clear existing markers
