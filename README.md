@@ -10,7 +10,7 @@ Infografiksida för Mensa Sveriges årsträff (Mensa SWAG) och halvårsträff. V
 - Chart.js (CDN) för grafer
 - Leaflet + OpenStreetMap-plattor (CDN) för karta. Mörkt läge görs med CSS-filter, så ingen API-nyckel behövs.
 - Ren JavaScript, ingen framework
-- Dark mode med localStorage
+- Dark mode följer enhetens tema. Knappen sparar bara ett val som avviker från enheten (localStorage), och graferna ritas om utan omladdning.
 - Alla beräkningar (trender, prognoser, datum) sker dynamiskt vid sidladdning
 
 ## Uppdatera data
@@ -82,17 +82,45 @@ Lägg till nytt år (källa: SCB):
 2027: 10750000,
 ```
 
+Saknas ett år räknas befolkningen fram från senast kända år och snittillväxten de fem senaste åren. Punkten visas då ihålig i grafen.
+
+### 6. Inflation (KPI)
+
+Sök: `const KPI = {`
+
+Lägg till årsmedeltalet när SCB publicerat det ([KPI, historiska tal, juli 1914=100](https://www.scb.se/hitta-statistik/statistik-efter-amne/priser-och-ekonomiska-tendenser/priser/konsumentprisindex-kpi/pong/tabell-och-diagram/historiska-tal/kpi-historiska-tal-1830/)) och flytta `KPI_BASE_YEAR` till senaste hela år:
+
+```javascript
+2026: 6140,
+```
+
+KPI används i ekonomimodellen för mat, dryck, aktiviteter och saknade konferenskostnader, och för att visa beloppen i fasta priser. År efter tabellen räknas med 2 % inflation (`KPI_FUTURE_INFLATION`).
+
 ## Automatiska beräkningar
 
 Följande behöver **inte** uppdateras manuellt:
 
 - Mensa SWAG-datum (beräknas från påskdagen → Kristi himmelsfärd)
-- Halvårsträff-datum (tredje fredagen i november)
+- Halvårsträff-datum (tredje helgen i november, fre–sön)
+- Bokning öppnar (första lördagen i februari) och sista ordinarie bokningsdag (~en vecka före SWAG)
 - Countdowns (byter automatiskt år)
-- Trendlinjer och prognoser (linjär regression)
-- Slider min/max på kartan
-- "Senast uppdaterad" i footern
-- Nästa SWAG-prognos
+- Trendlinjer och prognoser (linjär regression från `TREND_START_YEAR`, `FORECAST_HORIZON` år framåt, samma för alla grafer och prognosrutan)
+- Slider min/max och färgförklaring på kartan
+- "Senast uppdaterad" i footern (filens ändringsdatum)
+- Nästa SWAG-prognos, inklusive ekonomi (samma modell som historiken)
+
+## Ikoner och delningsbild
+
+- `favicon.svg` är källan för `favicon-32.png` och `apple-touch-icon.png`
+- `og-image.svg` är källan för `og-image.png` (förhandsbild när länken delas)
+
+Rendera om efter ändring:
+
+```bash
+inkscape og-image.svg -o og-image.png
+inkscape favicon.svg -w 32 -h 32 -o favicon-32.png
+inkscape favicon.svg -w 180 -h 180 -o apple-touch-icon.png
+```
 
 ## Lägga till nya grafer
 
@@ -144,27 +172,41 @@ function renderMyNewChart() {
 
 ### 3. Anropa i INIT
 
-Sök: `// INIT` och lägg till `renderMyNewChart();`
+Sök: `function renderAll()` och lägg till `renderMyNewChart();`. Funktionen körs vid sidladdning och vid temabyte, så grafen ritas om med rätt färger.
+
+Ge även `<canvas>` en beskrivning för skärmläsare: `role="img" aria-label="..."`.
 
 ### Konventioner
 
-- **Färger:** Blå (`#1a237e`) = medlemmar/SWAG, Orange (`#ff5722`) = procent, Grön (`#2e7d32`) = penetration, Lila (`#7c4dff`) = halvårsträff, Gul streckad (`#ffc107`) = trendlinjer
+- **Färger:** Blå (`#1a237e`, i mörkt läge `primaryLineColor()`) = medlemmar/SWAG, Orange (`#ff5722`) = procent, Grön (`#2e7d32`) = penetration, Lila (`#7c4dff`) = halvårsträff, Gul streckad (`#ffc107`) = trendlinjer
 - **Trend-box:** Grön bakgrund, visar R² och prognos
+- **Trender:** Använd `TREND_START_YEAR` och `FORECAST_HORIZON`, eller `membersTrend()`/`attendeesTrend()`, så att alla prognoser stämmer överens
 - **Pandemiår:** Exkluderas med `!d.cancelled` i filter
 - **Namngivning:** "Mensa SWAG" (inte bara "SWAG"), "Mensa Halvårsträff"
-- **Dark mode:** Fungerar automatiskt – Chart.js defaults sätts vid laddning
+- **Dark mode:** Fungerar automatiskt – Chart.js defaults sätts i `applyTheme()`
+- **Hover:** Tooltip och markering av hela året under pekaren är globala defaults, inget behöver göras per graf
 
 ## Hjälpfunktioner tillgängliga
 
 - `linearRegression(points)` – returnerar `{ slope, intercept, r2 }`
 - `forecast(reg, year)` – beräknar värde för ett år (aldrig < 0)
+- `membersTrend()`, `attendeesTrend()`, `hotelPriceTrend()` – gemensamma trender
 - `easterSunday(year)` – påskdagen
 - `ascensionDay(year)` – Kristi himmelsfärd
+- `swagDates(year)`, `halfSwagDates(year)` – `{ start, end }`
+- `bookingOpenDate(year)`, `lastBookingDate(year)` – bokningsdatum
 - `hasSwagPassed(year)` – har årets SWAG redan varit?
+- `isHeld(d)` – genomförd Mensa SWAG (även utan deltagarsiffra)
+- `hasAttendance(d)` – genomförd med känd deltagarsiffra
 - `getNextSwag()` – nästa SWAG utan data
+- `kpiFor(year)`, `adjustForInflation(amount, fromYear, toYear)` – inflation
+- `populationFor(year)` – befolkning, uträknad om SCB-siffra saknas
+- `economyModel(year, attendees)` – ekonomimodellen
 - `yearColor(index, total)` – gradient blå→orange för kartan
 
 ## Filer
 
 - `index.html` – hela sidan (HTML + CSS + JS + data)
+- `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png` – ikoner
+- `og-image.svg`, `og-image.png` – delningsbild
 - `README.md` – denna fil

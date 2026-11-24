@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Källa för og-image.png (förhandsbild vid delning). Rendera om med:
+       inkscape og-image.svg -o og-image.png -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a237e" />
+      <stop offset="1" stop-color="#3949ab" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <g font-family="DejaVu Sans, Arial, Helvetica, sans-serif" fill="#ffffff">
+    <text x="80" y="200" font-size="40" opacity="0.85">Mensa Sverige</text>
+    <text x="80" y="290" font-size="80" font-weight="bold">SWAG-statistik</text>
+    <text x="80" y="370" font-size="34" opacity="0.85">Medlemmar, deltagare, trender</text>
+    <text x="80" y="420" font-size="34" opacity="0.85">och prognoser sedan 1995</text>
+    <text x="80" y="550" font-size="26" opacity="0.6">mensasverige.github.io/swag-statistics</text>
+  </g>
+  <g transform="translate(850 180) scale(0.88)">
+    <rect x="0" y="230" width="70" height="120" rx="8" fill="#7986cb" />
+    <rect x="95" y="160" width="70" height="190" rx="8" fill="#ffc107" />
+    <rect x="190" y="60" width="70" height="290" rx="8" fill="#ff5722" />
+    <rect x="285" y="0" width="70" height="350" rx="8" fill="#ffffff" opacity="0.9" />
+    <path d="M0 200 L130 130 L225 40 L330 -20" fill="none" stroke="#ffffff"
+      stroke-width="8" stroke-linecap="round" stroke-dasharray="22 16" />
+  </g>
+</svg>

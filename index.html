@@ -35,11 +35,21 @@
   5. HOTELLPRISER (för ekonomisk modell)
      - Lägg till hotelPrice i DATA-raden för aktuellt år:
          { year: 2028, members: XXXX, attendees: XXX, location: "Stad", comment: null, hotelPrice: XXXX },
-     - Priset = standardrum/natt på huvudhotellet. Används som proxy för ortens prisnivå.
+     - Priset = standardrum/natt på huvudhotellet. Saknas det används hotellprisets trend.
 
+  6. INFLATION (KPI) OCH BEFOLKNING
+     - Sök efter "const KPI = {" och lägg till årsmedeltalet från SCB
+       (KPI, historiska tal, juli 1914=100). Flytta KPI_BASE_YEAR till senaste hela år.
+     - Sök efter "const SWEDEN_POP = {" och lägg till befolkningen från SCB.
+       Saknas året räknas det fram och markeras i grafen.
+
+  Trender och prognoser räknas från TREND_START_YEAR, FORECAST_HORIZON år framåt.
   Mensa SWAG-datum beräknas automatiskt (ons–sön under Kristi himmelsfärdshelgen).
-  "Senast uppdaterad" i footern beräknas automatiskt från senaste året med komplett data.
+  Bokning: första lördagen i februari, sista ordinarie bokningsdag ~en vecka före.
+  "Senast uppdaterad" i footern är filens ändringsdatum (document.lastModified).
   Slider min/max på kartan beräknas automatiskt från DATA.
+  Ikoner: favicon.svg (källa) -> favicon-32.png, apple-touch-icon.png.
+  Delningsbild: og-image.svg (källa) -> og-image.png (inkscape og-image.svg -o og-image.png).
   ============================================================
 -->
 <!doctype html>
@@ -48,12 +58,54 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mensa Sverige – SWAG-statistik</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <meta
+      name="description"
+      content="Statistik om Mensa Sveriges årsträff Mensa SWAG och halvårsträffen: medlemsutveckling, deltagare, trender, prognoser, karta och ekonomisk uppskattning."
+    />
+    <meta name="theme-color" content="#1a237e" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <!-- Förhandsvisning vid delning (Open Graph / Twitter) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="sv_SE" />
+    <meta property="og:site_name" content="Mensa Sverige" />
+    <meta property="og:title" content="Mensa Sverige – SWAG-statistik" />
+    <meta
+      property="og:description"
+      content="Medlemsutveckling, Mensa SWAG-träffar, halvårsträffar, trender och prognoser sedan 1995."
+    />
+    <meta
+      property="og:url"
+      content="https://mensasverige.github.io/swag-statistics/"
+    />
+    <meta
+      property="og:image"
+      content="https://mensasverige.github.io/swag-statistics/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Mensa Sverige – SWAG-statistik med stapeldiagram"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+      integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
+      crossorigin="anonymous"
+    ></script>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
+      crossorigin="anonymous"
     />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+      crossorigin="anonymous"
+    ></script>
     <style>
       :root {
         --primary: #1a237e;
@@ -89,6 +141,32 @@
         color: white;
         padding: 3rem 1rem 2rem;
         text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      /* Samma diagram som i og-image.svg, dekoration till höger */
+      .header-graphic {
+        position: absolute;
+        right: 5%;
+        bottom: 1.5rem;
+        height: 70%;
+        max-height: 190px;
+        pointer-events: none;
+      }
+      header > *:not(.header-graphic) {
+        position: relative;
+        z-index: 1;
+      }
+      @media (max-width: 1100px) {
+        .header-graphic {
+          display: none;
+        }
+      }
+      .countdown-item[title] {
+        cursor: help;
+      }
+      a.countdown-item[title] {
+        cursor: pointer;
       }
       header h1 {
         font-size: 2.4rem;
@@ -412,6 +490,96 @@
         font-size: 1.1rem;
         font-weight: 700;
       }
+      a.countdown-item {
+        color: inherit;
+        text-decoration: none;
+        transition: background 0.2s;
+      }
+      body.dark a.countdown-item {
+        color: inherit;
+      }
+      body.dark .leaflet-control-attribution {
+        background: rgba(30, 30, 30, 0.8);
+        color: #bdbdbd;
+      }
+      body.dark .leaflet-bar a {
+        background: #2a2a2a;
+        color: #e0e0e0;
+        border-bottom-color: #444;
+      }
+      a.countdown-item:hover,
+      a.countdown-item:focus-visible {
+        background: rgba(255, 255, 255, 0.22);
+      }
+
+      /* Innehållsmeny (sticky) */
+      .site-nav {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: var(--card);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .site-nav ul {
+        list-style: none;
+        display: flex;
+        gap: 0.25rem;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 0.4rem 1rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: thin;
+      }
+      .site-nav a {
+        display: block;
+        padding: 0.3rem 0.7rem;
+        border-radius: 6px;
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 0.85rem;
+      }
+      .site-nav a:hover,
+      .site-nav a:focus-visible {
+        background: rgba(57, 73, 171, 0.12);
+      }
+      body.dark .site-nav a {
+        color: #9fa8da;
+      }
+      [id] {
+        scroll-margin-top: 3.5rem;
+      }
+
+      /* Kartlegend */
+      .map-legend {
+        background: var(--card);
+        color: var(--text);
+        padding: 0.5rem 0.7rem;
+        border-radius: 6px;
+        box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+        font-size: 0.75rem;
+        line-height: 1.4;
+        min-width: 150px;
+      }
+      .map-legend .bar {
+        height: 10px;
+        border-radius: 3px;
+        margin: 0.2rem 0;
+      }
+      .map-legend .ends {
+        display: flex;
+        justify-content: space-between;
+      }
+      .map-legend .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+        vertical-align: middle;
+        margin-right: 0.3rem;
+      }
 
       @media (max-width: 900px) {
         .grid-2 {
@@ -434,6 +602,34 @@
   </head>
   <body>
     <header>
+      <!-- Samma diagram som i og-image.svg -->
+      <svg
+        class="header-graphic"
+        viewBox="-10 -30 375 390"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="0" y="230" width="70" height="120" rx="8" fill="#7986cb" />
+        <rect x="95" y="160" width="70" height="190" rx="8" fill="#ffc107" />
+        <rect x="190" y="60" width="70" height="290" rx="8" fill="#ff5722" />
+        <rect
+          x="285"
+          y="0"
+          width="70"
+          height="350"
+          rx="8"
+          fill="#ffffff"
+          opacity="0.9"
+        />
+        <path
+          d="M0 200 L130 130 L225 40 L330 -20"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-dasharray="22 16"
+        />
+      </svg>
       <h1>Mensa Sverige – SWAG-statistik</h1>
       <p>Medlemsutveckling, Mensa SWAG-träffar och trender sedan 1995</p>
       <div
@@ -460,10 +656,27 @@
           cursor: pointer;
           font-size: 0.85rem;
         "
+        aria-label="Växla mellan mörkt och ljust tema"
       >
         🌙 Mörkt
       </button>
     </header>
+    <nav class="site-nav" aria-label="Innehåll">
+      <ul>
+        <li><a href="#medlemmar">Medlemmar</a></li>
+        <li><a href="#tillvaxt">Tillväxt</a></li>
+        <li><a href="#penetration">Penetration</a></li>
+        <li><a href="#deltagare">Deltagare</a></li>
+        <li><a href="#topp">Topp &amp; senaste</a></li>
+        <li><a href="#halvarstraff">Halvårsträff</a></li>
+        <li><a href="#prognos">Prognos</a></li>
+        <li><a href="#ankomst">Ankomst</a></li>
+        <li><a href="#ekonomi">Ekonomi</a></li>
+        <li><a href="#karta">Karta</a></li>
+        <li><a href="#mensapriset">Mensapriset</a></li>
+        <li><a href="#data">All data</a></li>
+      </ul>
+    </nav>
     <div class="container">
       <!-- Nyckeltal -->
       <div class="stats-grid" id="statsGrid"></div>
@@ -527,42 +740,60 @@
       <div class="fun-facts" id="funFactsSwag"></div>
 
       <!-- Medlemsutveckling -->
-      <div class="section">
+      <div class="section" id="medlemmar">
         <h2>Medlemsutveckling (sedan 1995)</h2>
         <div class="chart-container chart-tall">
-          <canvas id="membersChart"></canvas>
+          <canvas
+            id="membersChart"
+            role="img"
+            aria-label="Linjediagram över antal medlemmar i Mensa Sverige per år sedan 1995, med trendlinje och prognos"
+          ></canvas>
         </div>
         <div class="trend-box" id="membersTrend"></div>
       </div>
 
       <!-- Tillväxttakt -->
-      <div class="section">
+      <div class="section" id="tillvaxt">
         <h2>Tillväxttakt (% förändring medlemmar per år)</h2>
         <div class="chart-container chart-medium">
-          <canvas id="growthChart"></canvas>
+          <canvas
+            id="growthChart"
+            role="img"
+            aria-label="Stapeldiagram över procentuell förändring av antal medlemmar per år"
+          ></canvas>
         </div>
         <div class="trend-box" id="growthNote"></div>
       </div>
 
       <!-- Mensa-penetration -->
-      <div class="section">
+      <div class="section" id="penetration">
         <h2>Mensa-penetration (andel av möjliga medlemmar)</h2>
         <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
           Mensa-medlemmar som andel av 2% av Sveriges befolkning (den andel som
-          kvalificerar sig).
+          kvalificerar sig). Befolkning: SCB. År utan SCB-siffra räknas fram
+          från senaste kända befolkning och snittillväxten de fem senaste åren
+          och visas som ihåliga punkter.
         </p>
         <div class="chart-container chart-medium">
-          <canvas id="penetrationChart"></canvas>
+          <canvas
+            id="penetrationChart"
+            role="img"
+            aria-label="Linjediagram över medlemmar som andel av de som kvalificerar sig för Mensa i Sverige"
+          ></canvas>
         </div>
         <div class="trend-box" id="penetrationNote"></div>
       </div>
 
       <!-- Deltagare + Procent -->
-      <div class="grid-2">
+      <div class="grid-2" id="deltagare">
         <div class="section">
           <h2>Deltagare på Mensa SWAG</h2>
           <div class="chart-container chart-medium">
-            <canvas id="attendeesChart"></canvas>
+            <canvas
+              id="attendeesChart"
+              role="img"
+              aria-label="Stapeldiagram över antal deltagare på Mensa SWAG per år, med trendlinje"
+            ></canvas>
           </div>
           <div class="cancelled-box">
             ⚠️ 2020 och 2021 inställda pga pandemin – exkluderas från trender.
@@ -578,30 +809,42 @@
         <div class="section">
           <h2>Deltagarandel (% av medlemmar)</h2>
           <div class="chart-container chart-medium">
-            <canvas id="percentChart"></canvas>
+            <canvas
+              id="percentChart"
+              role="img"
+              aria-label="Linjediagram över andel av medlemmarna som deltog på Mensa SWAG per år"
+            ></canvas>
           </div>
           <div class="trend-box" id="percentNote"></div>
         </div>
       </div>
 
       <!-- Top 5 + Senaste 5 -->
-      <div class="grid-2">
+      <div class="grid-2" id="topp">
         <div class="section">
           <h2>Top 5 största Mensa SWAG</h2>
           <div class="chart-container chart-medium">
-            <canvas id="top5Chart"></canvas>
+            <canvas
+              id="top5Chart"
+              role="img"
+              aria-label="Liggande stapeldiagram över de fem Mensa SWAG med flest deltagare"
+            ></canvas>
           </div>
         </div>
         <div class="section">
           <h2>Senaste 5 Mensa SWAG</h2>
           <div class="chart-container chart-medium">
-            <canvas id="recent5Chart"></canvas>
+            <canvas
+              id="recent5Chart"
+              role="img"
+              aria-label="Stapeldiagram över deltagare på de fem senaste Mensa SWAG"
+            ></canvas>
           </div>
         </div>
       </div>
 
       <!-- ½SWAG -->
-      <div class="grid-2">
+      <div class="grid-2" id="halvarstraff">
         <div class="section">
           <h2>Mensa Halvårsträff – deltagare</h2>
           <p
@@ -611,7 +854,11 @@
             SWAG-ort för att reka och bygga förväntningar.
           </p>
           <div class="chart-container chart-medium">
-            <canvas id="halfSwagChart"></canvas>
+            <canvas
+              id="halfSwagChart"
+              role="img"
+              aria-label="Stapeldiagram över antal deltagare på Mensa Halvårsträff per år"
+            ></canvas>
           </div>
           <div class="highlight-box">
             📝 Tidiga siffror (2017–2021) är ungefärliga uppskattningar. 2020
@@ -628,7 +875,11 @@
             Halvårsträff-deltagare jämfört med SWAG året efter på samma ort.
           </p>
           <div class="chart-container chart-medium">
-            <canvas id="halfVsFullChart"></canvas>
+            <canvas
+              id="halfVsFullChart"
+              role="img"
+              aria-label="Linjediagram över halvårsträffens deltagare som andel av Mensa SWAG året efter"
+            ></canvas>
           </div>
           <div class="trend-box" id="halfVsFullTrend"></div>
         </div>
@@ -638,11 +889,15 @@
       <div class="fun-facts" id="funFactsHalf"></div>
 
       <!-- Prognos -->
-      <div class="section">
+      <div class="section" id="prognos">
         <h2 id="forecastTitle">Prognos: Nästa Mensa SWAG</h2>
         <div class="grid-2">
           <div class="chart-container chart-small">
-            <canvas id="forecastChart"></canvas>
+            <canvas
+              id="forecastChart"
+              role="img"
+              aria-label="Stapeldiagram över de fem senaste Mensa SWAG och prognos för nästa"
+            ></canvas>
           </div>
           <div
             id="forecastText"
@@ -652,76 +907,82 @@
       </div>
 
       <!-- Ankomstfördelning -->
-      <div class="section">
+      <div class="section" id="ankomst">
         <h2>Ankomst- och avresefördelning (SWAG-veckan)</h2>
-        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
-          Uppskattad fördelning baserad på enkäter och observationer. Grönt fält
-          = SWAG pågår (ons–sön).
-        </p>
-        <div class="chart-container chart-medium">
-          <canvas id="arrivalChart"></canvas>
+        <div class="highlight-box">
+          📝 <strong>Uppskattning, inte mätvärden.</strong> Fördelningen är en
+          grov bedömning från arrangörer och deltagare. Grönt fält = Mensa SWAG
+          pågår (ons–sön).
         </div>
-        <div style="display: none"><canvas id="departureChart"></canvas></div>
+        <div class="chart-container chart-medium">
+          <canvas
+            id="arrivalChart"
+            role="img"
+            aria-label="Linjediagram med uppskattad andel deltagare som anländer och reser hem respektive dag under SWAG-veckan"
+          ></canvas>
+        </div>
       </div>
 
       <!-- Ekonomisk uppskattning -->
-      <div class="section">
+      <div class="section" id="ekonomi">
         <h2>Uppskattad ekonomisk påverkan per Mensa SWAG</h2>
         <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem">
-          Modellberäkning baserad på hotellpriser, mat, dryck, aktiviteter och
-          konferenskostnad. Normalfördelning används för spridning.
+          Modellberäkning med snittvärden för boende, mat, dryck, aktiviteter
+          och konferenskostnad. Boende bygger på huvudhotellets rumspris. Mat,
+          dryck, aktiviteter och saknade konferenskostnader räknas om med
+          konsumentprisindex (KPI, SCB). Staplarna visar löpande priser, linjen
+          samma belopp i <span class="kpi-base-year"></span> års penningvärde.
         </p>
         <div class="grid-2">
           <div class="chart-container chart-medium">
-            <canvas id="economyChart"></canvas>
+            <canvas
+              id="economyChart"
+              role="img"
+              aria-label="Stapeldiagram över uppskattad total ekonomisk påverkan per Mensa SWAG, i löpande och fasta priser"
+            ></canvas>
           </div>
           <div class="chart-container chart-medium">
-            <canvas id="economyBreakdownChart"></canvas>
+            <canvas
+              id="economyBreakdownChart"
+              role="img"
+              aria-label="Ringdiagram över hur den uppskattade omsättningen fördelas på boende, mat, dryck, aktiviteter och konferens"
+            ></canvas>
           </div>
         </div>
         <div class="trend-box" id="economyNote"></div>
       </div>
 
       <!-- Karta -->
-      <div class="section">
+      <div class="section" id="karta">
         <h2>Karta – Mensa SWAG genom åren</h2>
         <p
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.3rem"
         >
-          Färgerna visar kronologisk ordning: blått (tidigt) → orange/rött
-          (nyligen). Klicka för detaljer.
+          Färgerna visar kronologisk ordning: blått (tidigt) → orange (senast),
+          se förklaringen i kartans hörn. Klicka på en punkt för detaljer.
         </p>
         <div class="slider-container">
-          <label>Visa från:</label>
-          <span class="year-display" id="mapYearMin">1995</span>
-          <input
-            type="range"
-            id="mapSliderMin"
-            min="1995"
-            max="2027"
-            value="1995"
-            step="1"
-          />
-          <label>till:</label>
-          <span class="year-display" id="mapYearMax">2028</span>
-          <input
-            type="range"
-            id="mapSliderMax"
-            min="1995"
-            max="2027"
-            value="2027"
-            step="1"
-          />
+          <label for="mapSliderMin">Visa från:</label>
+          <span class="year-display" id="mapYearMin" aria-hidden="true"></span>
+          <input type="range" id="mapSliderMin" step="1" />
+          <label for="mapSliderMax">till:</label>
+          <span class="year-display" id="mapYearMax" aria-hidden="true"></span>
+          <input type="range" id="mapSliderMax" step="1" />
         </div>
         <p
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
           id="mapInfo"
+          aria-live="polite"
         ></p>
-        <div id="map"></div>
+        <div
+          id="map"
+          role="region"
+          aria-label="Karta över Sverige med orterna för Mensa SWAG"
+        ></div>
       </div>
 
       <!-- Mensapristagare -->
-      <div class="section">
+      <div class="section" id="mensapriset">
         <h2>Mensapristagare</h2>
         <p
           style="margin-bottom: 0.8rem; font-size: 0.9rem; color: var(--muted)"
@@ -787,8 +1048,8 @@
       </div>
 
       <!-- Tabell -->
-      <div class="section">
-        <h2>All data (1981–2028)</h2>
+      <div class="section" id="data">
+        <h2 id="dataTitle">All data</h2>
         <p
           style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem"
         >
@@ -801,7 +1062,11 @@
                 <th>År</th>
                 <th>Medlemmar</th>
                 <th>Mensa SWAG</th>
-                <th>Halvårsträff</th>
+                <th
+                  title="Halvårsträffen hålls i november året före, på samma ort som Mensa SWAG"
+                >
+                  Halvårsträff (nov året innan)
+                </th>
                 <th>Plats (SWAG)</th>
                 <th>Kommentar</th>
               </tr>
@@ -819,7 +1084,18 @@
         build krävs.
       </p>
       <p style="margin-top: 0.3rem">
-        Senast uppdaterad: <span id="lastUpdatedYear"></span>
+        Senast uppdaterad: <span id="lastUpdated"></span> · Data t.o.m. Mensa
+        SWAG <span id="lastUpdatedYear"></span>
+      </p>
+      <p style="margin-top: 0.3rem">
+        Inflation: KPI från
+        <a
+          href="https://www.scb.se/hitta-statistik/statistik-efter-amne/priser-och-ekonomiska-tendenser/priser/konsumentprisindex-kpi/pong/tabell-och-diagram/historiska-tal/kpi-historiska-tal-1830/"
+          target="_blank"
+          >SCB</a
+        >
+        · Bokning och program:
+        <a href="https://swag.mensa.se" target="_blank">swag.mensa.se</a>
       </p>
     </footer>
     <script>
@@ -1239,7 +1515,45 @@
         { year: 2024, attendees: 145, location: "Visby", swagYear: 2025 },
         { year: 2025, attendees: 240, location: "Jönköping", swagYear: 2026 },
         { year: 2026, attendees: 221, location: "Borås", swagYear: 2027 },
+        { year: 2027, attendees: null, location: "Umeå", swagYear: 2028 },
       ];
+
+      // ============================================================
+      // KPI – konsumentprisindex, årsmedeltal (juli 1914 = 100)
+      // Källa: SCB, "KPI, historiska tal, 1830–". Används för att räkna om
+      // belopp mellan år (inflation). Bara kvoter används, så basen spelar
+      // ingen roll. Lägg till nytt år när SCB publicerat årsmedeltalet.
+      // ============================================================
+      const KPI = {
+        2003: 4063,
+        2004: 4078,
+        2005: 4097,
+        2006: 4153,
+        2007: 4244,
+        2008: 4390,
+        2009: 4378,
+        2010: 4434,
+        2011: 4550,
+        2012: 4590,
+        2013: 4588,
+        2014: 4580,
+        2015: 4578,
+        2016: 4623,
+        2017: 4706,
+        2018: 4798,
+        2019: 4884,
+        2020: 4908,
+        2021: 5014,
+        2022: 5434,
+        2023: 5898,
+        2024: 6065,
+        2025: 6107,
+        2026: 6140, // preliminärt: snitt jan–okt 2026
+      };
+      // Senaste år med fastställt årsmedeltal = "dagens penningvärde"
+      const KPI_BASE_YEAR = 2025;
+      // Antagen inflation för år efter tabellen (Riksbankens mål)
+      const KPI_FUTURE_INFLATION = 0.02;
 
       const COORDS = {
         "Lohärad-Råby": [59.72, 18.55],
@@ -1272,6 +1586,37 @@
       // HELPERS
       // ============================================================
       const STAT_START_YEAR = 1995;
+      // Alla trendlinjer och prognoser räknas från samma år och lika långt fram
+      const TREND_START_YEAR = 2010;
+      const FORECAST_HORIZON = 4;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+
+      // KPI för ett år. Saknas året räknas det fram från närmaste kända år
+      // (bakåt: första kända värdet, framåt: antagen inflation per år).
+      function kpiFor(year) {
+        if (KPI[year]) return KPI[year];
+        const years = Object.keys(KPI).map(Number);
+        const first = Math.min(...years);
+        const last = Math.max(...years);
+        if (year < first) return KPI[first];
+        return KPI[last] * Math.pow(1 + KPI_FUTURE_INFLATION, year - last);
+      }
+
+      // Räkna om ett belopp från ett års prisnivå till ett annat års
+      function adjustForInflation(amount, fromYear, toYear) {
+        return (amount * kpiFor(toYear)) / kpiFor(fromYear);
+      }
+
+      // Genomförd Mensa SWAG: har ort, är inte inställd och har passerat.
+      // Räknas även om deltagarsiffran saknas (t.ex. Stockholm 1999).
+      function isHeld(d) {
+        return !!d.location && !d.cancelled && hasSwagPassed(d.year);
+      }
+
+      // Genomförd Mensa SWAG med känd deltagarsiffra
+      function hasAttendance(d) {
+        return !d.cancelled && d.attendees != null && d.attendees > 0;
+      }
 
       // Beräkna påskdagen (Meeus/Jones/Butcher algoritm)
       function easterSunday(year) {
@@ -1294,15 +1639,55 @@
 
       // Kristi himmelsfärdsdag = påsk + 39 dagar
       function ascensionDay(year) {
-        const easter = easterSunday(year);
-        return new Date(easter.getTime() + 39 * 24 * 60 * 60 * 1000);
+        return addDays(easterSunday(year), 39);
       }
 
       // SWAG-helgen: ons–sön kring Kristi himmelsfärd (tors)
       // Onsdag = himmelsfärd - 1 dag, Söndag = himmelsfärd + 2 dagar
       function swagEndDate(year) {
+        return swagDates(year).end;
+      }
+
+      // Skapa datum via kalenderdagar (inte millisekunder), så att
+      // sommartid inte flyttar dagen
+      function addDays(date, days) {
+        const d = new Date(date);
+        d.setDate(d.getDate() + days);
+        return d;
+      }
+
+      // Mensa SWAG: onsdag–söndag kring Kristi himmelsfärd
+      function swagDates(year) {
         const asc = ascensionDay(year);
-        return new Date(asc.getTime() + 2 * 24 * 60 * 60 * 1000); // Söndag
+        const start = addDays(asc, -1); // onsdag 00:00
+        const end = addDays(asc, 2); // söndag
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+      }
+
+      // Bokningen öppnar normalt första lördagen i februari (swag.mensa.se)
+      function bookingOpenDate(year) {
+        const d = new Date(year, 1, 1);
+        while (d.getDay() !== 6) d.setDate(d.getDate() + 1);
+        return d;
+      }
+
+      // Sista ordinarie bokningsdag: ungefär en vecka före Mensa SWAG.
+      // Det går att boka på plats och till aktiviteter även efter.
+      function lastBookingDate(year) {
+        const d = addDays(swagDates(year).start, -7);
+        d.setHours(23, 59, 59, 999);
+        return d;
+      }
+
+      // Mensa Halvårsträff: tredje helgen i november, fredag–söndag
+      function halfSwagDates(year) {
+        const start = new Date(year, 10, 1);
+        while (start.getDay() !== 5) start.setDate(start.getDate() + 1);
+        start.setDate(start.getDate() + 14); // tredje fredagen
+        const end = addDays(start, 2);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
       }
 
       // Har årets SWAG redan passerat?
@@ -1349,12 +1734,27 @@
 
       function getValidAttendees() {
         return DATA.filter(
-          (d) =>
-            d.year >= STAT_START_YEAR &&
-            d.attendees != null &&
-            d.attendees > 0 &&
-            !d.cancelled,
+          (d) => d.year >= STAT_START_YEAR && hasAttendance(d),
         ).map((d) => [d.year, d.attendees]);
+      }
+
+      // Gemensamma trender – används av både grafer och prognosrutan
+      function membersTrend() {
+        return linearRegression(
+          getValidMembers().filter((p) => p[0] >= TREND_START_YEAR),
+        );
+      }
+      function attendeesTrend() {
+        return linearRegression(
+          getValidAttendees().filter((p) => p[0] >= TREND_START_YEAR),
+        );
+      }
+      function hotelPriceTrend() {
+        return linearRegression(
+          DATA.filter((d) => d.hotelPrice && d.year >= TREND_START_YEAR).map(
+            (d) => [d.year, d.hotelPrice],
+          ),
+        );
       }
 
       function getNextSwag() {
@@ -1377,6 +1777,16 @@
         return completed[completed.length - 1];
       }
 
+      // Mörkblått syns dåligt mot mörk bakgrund – ljusare blått i mörkt läge
+      function primaryLineColor() {
+        return document.body.classList.contains("dark") ? "#7986cb" : "#1a237e";
+      }
+      function primaryFillColor(alpha) {
+        return document.body.classList.contains("dark")
+          ? `rgba(121,134,203,${alpha})`
+          : `rgba(26,35,126,${alpha})`;
+      }
+
       function yearColor(index, total) {
         const ratio = index / (total - 1 || 1);
         const r = Math.round(26 + ratio * (255 - 26));
@@ -1390,14 +1800,13 @@
       // ============================================================
       function renderStats() {
         const latest = getLastCompletedYear();
-        const validAtt = DATA.filter(
-          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
-        );
+        const validAtt = DATA.filter(hasAttendance);
         const maxAtt = validAtt.reduce(
           (max, d) => (d.attendees > max.attendees ? d : max),
           { attendees: 0 },
         );
-        const gatherings = validAtt.length;
+        // Samma definition som kartan: alla genomförda, även utan deltagarsiffra
+        const gatherings = DATA.filter(isHeld).length;
         const nextSwag = getNextSwag();
         const avgAtt5 =
           validAtt.slice(-5).reduce((s, d) => s + d.attendees, 0) /
@@ -1442,10 +1851,10 @@
       // ============================================================
       function renderMembersChart() {
         const points = getValidMembers();
-        const reg = linearRegression(points.filter((p) => p[0] >= 2000));
+        const reg = membersTrend();
         const forecastYears = [];
         const lastYear = points[points.length - 1][0];
-        for (let y = lastYear + 1; y <= lastYear + 4; y++)
+        for (let y = lastYear + 1; y <= lastYear + FORECAST_HORIZON; y++)
           forecastYears.push(y);
 
         const allLabels = [...points.map((p) => p[0]), ...forecastYears];
@@ -1453,9 +1862,11 @@
           const f = points.find((p) => p[0] === y);
           return f ? f[1] : null;
         });
-        const trend = allLabels.map((y) => forecast(reg, y));
+        const trend = allLabels.map((y) =>
+          y >= TREND_START_YEAR ? forecast(reg, y) : null,
+        );
 
-        const maxVal = Math.max(...points.map((p) => p[1]));
+        const maxVal = Math.max(...points.map((p) => p[1]), ...trend);
         const yMax = Math.ceil(maxVal / 1000) * 1000 + 1000;
 
         new Chart(document.getElementById("membersChart"), {
@@ -1466,15 +1877,15 @@
               {
                 label: "Medlemmar",
                 data: actual,
-                borderColor: "#1a237e",
-                backgroundColor: "rgba(26,35,126,0.08)",
+                borderColor: primaryLineColor(),
+                backgroundColor: primaryFillColor(0.08),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
                 spanGaps: false,
               },
               {
-                label: "Trend (linj\u00e4r, fr\u00e5n 2000)",
+                label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trend,
                 borderColor: "#ffc107",
                 borderDash: [6, 3],
@@ -1499,7 +1910,7 @@
         });
 
         document.getElementById("membersTrend").innerHTML =
-          `\ud83d\udcc8 <strong>Trend (sedan 2000):</strong> ~${Math.round(reg.slope)} nya medlemmar/\u00e5r. Prognos ${lastYear + 4}: ~${forecast(reg, lastYear + 4).toLocaleString("sv-SE")}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
+          `📈 <strong>Trend (sedan ${TREND_START_YEAR}):</strong> ~${Math.round(reg.slope)} nya medlemmar/år. Prognos ${lastYear + FORECAST_HORIZON}: ~${forecast(reg, lastYear + FORECAST_HORIZON).toLocaleString("sv-SE")}. <em>(R² = ${reg.r2.toFixed(3)})</em>`;
       }
 
       // ============================================================
@@ -1507,10 +1918,10 @@
       // ============================================================
       function renderAttendeesChart() {
         const points = getValidAttendees();
-        const reg = linearRegression(points.filter((p) => p[0] >= 2010));
+        const reg = attendeesTrend();
         const forecastYears = [];
         const lastYear = points[points.length - 1][0];
-        for (let y = lastYear + 1; y <= lastYear + 3; y++)
+        for (let y = lastYear + 1; y <= lastYear + FORECAST_HORIZON; y++)
           forecastYears.push(y);
 
         const allLabels = [...points.map((p) => p[0]), ...forecastYears];
@@ -1518,7 +1929,9 @@
           const f = points.find((p) => p[0] === y);
           return f ? f[1] : null;
         });
-        const trend = allLabels.map((y) => forecast(reg, y));
+        const trend = allLabels.map((y) =>
+          y >= TREND_START_YEAR ? forecast(reg, y) : null,
+        );
 
         new Chart(document.getElementById("attendeesChart"), {
           type: "bar",
@@ -1532,7 +1945,7 @@
                 borderRadius: 3,
               },
               {
-                label: "Trend (fr\u00e5n 2010)",
+                label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trend,
                 type: "line",
                 borderColor: "#ffc107",
@@ -1554,7 +1967,7 @@
         });
 
         document.getElementById("attendeesTrend").innerHTML =
-          `\ud83d\udcc8 <strong>Trend (sedan 2010, exkl. pandemi\u00e5r):</strong> ~${Math.round(reg.slope)} fler/\u00e5r. Prognos ${lastYear + 3}: ~${forecast(reg, lastYear + 3).toLocaleString("sv-SE")}. <em>(R\u00b2 = ${reg.r2.toFixed(3)})</em>`;
+          `📈 <strong>Trend (sedan ${TREND_START_YEAR}, exkl. pandemiår):</strong> ~${Math.round(reg.slope)} fler/år. Prognos ${lastYear + FORECAST_HORIZON}: ~${forecast(reg, lastYear + FORECAST_HORIZON).toLocaleString("sv-SE")}. <em>(R² = ${reg.r2.toFixed(3)})</em>`;
       }
 
       // ============================================================
@@ -1575,13 +1988,14 @@
         );
 
         // Trendlinje för procentandelen
-        const pctPoints = valid.map((d) => [
-          d.year,
-          (d.attendees / d.members) * 100,
-        ]);
+        const pctPoints = valid
+          .filter((d) => d.year >= TREND_START_YEAR)
+          .map((d) => [d.year, (d.attendees / d.members) * 100]);
         const pctReg = linearRegression(pctPoints);
         const trendData = labels.map((y) =>
-          Math.max(0, pctReg.slope * y + pctReg.intercept).toFixed(1),
+          y >= TREND_START_YEAR
+            ? Math.max(0, pctReg.slope * y + pctReg.intercept).toFixed(1)
+            : null,
         );
 
         new Chart(document.getElementById("percentChart"), {
@@ -1599,7 +2013,7 @@
                 pointRadius: 3,
               },
               {
-                label: "Trend (linjär)",
+                label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trendData,
                 borderColor: "#ffc107",
                 borderDash: [6, 3],
@@ -1625,7 +2039,7 @@
         const latest = pcts[pcts.length - 1];
         const trendDir = pctReg.slope > 0 ? "uppåt" : "nedåt";
         document.getElementById("percentNote").innerHTML =
-          `📈 Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste året: <strong>${latest}%</strong>. Trend: <strong>${trendDir}</strong> (${pctReg.slope > 0 ? "+" : ""}${pctReg.slope.toFixed(2)} procentenheter/år). <em>(R² = ${pctReg.r2.toFixed(3)})</em>`;
+          `📈 Snitt: <strong>${avg}%</strong> av medlemmarna deltar. Senaste året: <strong>${latest}%</strong>. Trend sedan ${TREND_START_YEAR}: <strong>${trendDir}</strong> (${pctReg.slope > 0 ? "+" : ""}${pctReg.slope.toFixed(2)} procentenheter/år). <em>(R² = ${pctReg.r2.toFixed(3)})</em>`;
       }
 
       // ============================================================
@@ -1640,7 +2054,8 @@
         for (let i = 1; i < members.length; i++) {
           const prev = members[i - 1].members;
           const curr = members[i].members;
-          if (prev > 0) {
+          // Bara år i följd, annars blir flera års förändring en stapel
+          if (prev > 0 && members[i].year - members[i - 1].year === 1) {
             labels.push(members[i].year);
             growthData.push((((curr - prev) / prev) * 100).toFixed(1));
           }
@@ -1718,36 +2133,60 @@
         2026: 10701000,
       };
 
+      // Befolkning för ett år. Saknas SCB-siffra räknas den fram från senast
+      // kända år med snittillväxten (%/år) för de fem senaste kända åren.
+      function populationFor(year) {
+        if (SWEDEN_POP[year])
+          return { pop: SWEDEN_POP[year], estimated: false };
+        const years = Object.keys(SWEDEN_POP)
+          .map(Number)
+          .sort((a, b) => a - b);
+        const last = years[years.length - 1];
+        if (year < years[0]) return null;
+        const span = Math.min(5, years.length - 1);
+        const first = years[years.length - 1 - span];
+        const rate =
+          Math.pow(SWEDEN_POP[last] / SWEDEN_POP[first], 1 / (last - first)) -
+          1;
+        return {
+          pop: Math.round(SWEDEN_POP[last] * Math.pow(1 + rate, year - last)),
+          estimated: true,
+          rate,
+        };
+      }
+
       function renderPenetrationChart() {
         const valid = DATA.filter(
           (d) =>
             d.year >= STAT_START_YEAR &&
             d.members != null &&
-            SWEDEN_POP[d.year],
-        );
+            populationFor(d.year),
+        ).map((d) => ({ ...d, popInfo: populationFor(d.year) }));
         const labels = valid.map((d) => d.year);
         // 2% av befolkningen = potentiella medlemmar
-        const pctData = valid.map((d) =>
-          ((d.members / (SWEDEN_POP[d.year] * 0.02)) * 100).toFixed(2),
-        );
+        const pctOf = (d) => (d.members / (d.popInfo.pop * 0.02)) * 100;
+        const pctData = valid.map((d) => pctOf(d).toFixed(2));
+        const estimated = valid.map((d) => d.popInfo.estimated);
 
-        // Trendlinje + prognos 4 år framåt
-        const points = valid.map((d) => [
-          d.year,
-          (d.members / (SWEDEN_POP[d.year] * 0.02)) * 100,
-        ]);
+        // Trendlinje + prognos (samma start och horisont som övriga grafer)
+        const points = valid
+          .filter((d) => d.year >= TREND_START_YEAR)
+          .map((d) => [d.year, pctOf(d)]);
         const reg = linearRegression(points);
 
         const lastYear = valid[valid.length - 1].year;
         const forecastYears = [];
-        for (let y = lastYear + 1; y <= lastYear + 4; y++)
+        for (let y = lastYear + 1; y <= lastYear + FORECAST_HORIZON; y++)
           forecastYears.push(y);
 
         const allLabels = [...labels, ...forecastYears];
         const allActual = [...pctData, ...forecastYears.map(() => null)];
         const allTrend = allLabels.map((y) =>
-          Math.max(0, reg.slope * y + reg.intercept).toFixed(2),
+          y >= TREND_START_YEAR
+            ? Math.max(0, reg.slope * y + reg.intercept).toFixed(2)
+            : null,
         );
+        const isEst = (ctx) => estimated[ctx.dataIndex] === true;
 
         new Chart(document.getElementById("penetrationChart"), {
           type: "line",
@@ -1761,11 +2200,19 @@
                 backgroundColor: "rgba(46,125,50,0.1)",
                 fill: true,
                 tension: 0.3,
-                pointRadius: 3,
+                pointRadius: (ctx) => (isEst(ctx) ? 5 : 3),
+                pointBackgroundColor: (ctx) =>
+                  isEst(ctx) ? "transparent" : "#2e7d32",
+                pointBorderWidth: (ctx) => (isEst(ctx) ? 2 : 1),
+                // Streckad linje in till år med uträknad befolkning
+                segment: {
+                  borderDash: (ctx) =>
+                    estimated[ctx.p1DataIndex] ? [4, 4] : undefined,
+                },
                 spanGaps: false,
               },
               {
-                label: "Trend (linjär)",
+                label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: allTrend,
                 borderColor: "#ffc107",
                 borderDash: [6, 3],
@@ -1777,7 +2224,17 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: "bottom" } },
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  afterLabel: (ctx) =>
+                    ctx.datasetIndex === 0 && estimated[ctx.dataIndex]
+                      ? "Befolkning uträknad (ingen SCB-siffra ännu)"
+                      : "",
+                },
+              },
+            },
             scales: {
               y: { min: 0, title: { display: true, text: "%" } },
               x: { ticks: { maxRotation: 45, minRotation: 45 } },
@@ -1787,12 +2244,17 @@
 
         const latest = pctData[pctData.length - 1];
         const latestYear = labels[labels.length - 1];
-        const latestPotential = Math.round(SWEDEN_POP[latestYear] * 0.02);
-        const forecast4 = (reg.slope * (lastYear + 4) + reg.intercept).toFixed(
-          2,
-        );
+        const latestPop = valid[valid.length - 1].popInfo;
+        const latestPotential = Math.round(latestPop.pop * 0.02);
+        const forecastLast = Math.max(
+          0,
+          reg.slope * (lastYear + FORECAST_HORIZON) + reg.intercept,
+        ).toFixed(2);
+        const estNote = latestPop.estimated
+          ? ` <em>Befolkningen ${latestYear} är uträknad (+${(latestPop.rate * 100).toFixed(2)}%/år) tills SCB-siffran finns.</em>`
+          : "";
         document.getElementById("penetrationNote").innerHTML =
-          `📈 <strong>${latestYear}:</strong> ${latest}% av de ~${latestPotential.toLocaleString("sv-SE")} som kvalificerar sig (2% av ${(SWEDEN_POP[latestYear] / 1000000).toFixed(1)}M) är Mensa-medlemmar. Prognos ${lastYear + 4}: ~${forecast4}%. Trend: <strong>${reg.slope > 0 ? "uppåt" : "nedåt"}</strong>. <em>(R² = ${reg.r2.toFixed(3)})</em>`;
+          `📈 <strong>${latestYear}:</strong> ${latest}% av de ~${latestPotential.toLocaleString("sv-SE")} som kvalificerar sig (2% av ${(latestPop.pop / 1000000).toFixed(1)}M) är Mensa-medlemmar. Prognos ${lastYear + FORECAST_HORIZON}: ~${forecastLast}%. Trend sedan ${TREND_START_YEAR}: <strong>${reg.slope > 0 ? "uppåt" : "nedåt"}</strong>. <em>(R² = ${reg.r2.toFixed(3)})</em>${estNote}`;
       }
 
       // ============================================================
@@ -1947,7 +2409,9 @@
           .filter((p) => p.fullAtt != null);
 
         if (pairs.length === 0) {
-          document.getElementById("halfVsFullChart").parentElement.innerHTML =
+          const canvas = document.getElementById("halfVsFullChart");
+          if (!canvas) return;
+          canvas.parentElement.innerHTML =
             '<p style="color:var(--muted);text-align:center;padding:2rem;">Inte tillräckligt med data för jämförelse ännu.</p>';
           return;
         }
@@ -1958,8 +2422,9 @@
         );
 
         // Trendlinje
-        const pctPoints = pairs.map((p, i) => [
-          i,
+        // x = SWAG-året, så att luckor (t.ex. 2020) räknas som tid
+        const pctPoints = pairs.map((p) => [
+          p.fullYear,
           (p.halfAtt / p.fullAtt) * 100,
         ]);
         const pctReg = linearRegression(pctPoints);
@@ -2024,21 +2489,17 @@
         const nextSwag = getNextSwag();
         if (!nextSwag) return;
 
-        const attReg = linearRegression(
-          getValidAttendees().filter((p) => p[0] >= 2010),
-        );
-        const memReg = linearRegression(
-          getValidMembers().filter((p) => p[0] >= 2010),
-        );
-
-        const predAtt = forecast(attReg, nextSwag.year);
-        const predMem = forecast(memReg, nextSwag.year);
+        // Samma trender som graferna
+        const predAtt = forecast(attendeesTrend(), nextSwag.year);
+        const memberRow = DATA.find((d) => d.year === nextSwag.year);
+        const memKnown = memberRow && memberRow.members != null;
+        const predMem = memKnown
+          ? memberRow.members
+          : forecast(membersTrend(), nextSwag.year);
         const predPct =
           predMem > 0 ? ((predAtt / predMem) * 100).toFixed(1) : "?";
 
-        const valid = DATA.filter(
-          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
-        );
+        const valid = DATA.filter(hasAttendance);
         const recent = valid.slice(-5);
         const labels = [...recent.map((d) => `${d.year}`), `${nextSwag.year}?`];
         const values = [...recent.map((d) => d.attendees), predAtt];
@@ -2068,44 +2529,28 @@
           },
         });
 
-        const asc = ascensionDay(nextSwag.year);
-        const swagStart = new Date(asc.getTime() - 1 * 24 * 60 * 60 * 1000); // onsdag
-        const swagEnd = new Date(asc.getTime() + 2 * 24 * 60 * 60 * 1000); // söndag
+        const { start: swagStart, end: swagEnd } = swagDates(nextSwag.year);
         const dateOpts = { day: "numeric", month: "long" };
         const swagDateStr = `${swagStart.toLocaleDateString("sv-SE", dateOpts)} – ${swagEnd.toLocaleDateString("sv-SE", dateOpts)}`;
-
-        // Ekonomisk prognos för nästa SWAG
-        // Uppskatta hotellpris via trend från senaste åren med hotelPrice
-        const hotelYears = DATA.filter(
-          (d) => d.hotelPrice && d.year >= 2010,
-        ).map((d) => [d.year, d.hotelPrice]);
-        const hotelReg = linearRegression(hotelYears);
-        const lastHotelPrice = hotelYears[hotelYears.length - 1][1];
-        const predHotel = Math.max(
-          lastHotelPrice,
-          Math.round(hotelReg.slope * nextSwag.year + hotelReg.intercept),
+        const bookingStr = bookingOpenDate(nextSwag.year).toLocaleDateString(
+          "sv-SE",
+          dateOpts,
         );
-        const foodFactor = predHotel / 1350;
-        const predAccom = predHotel * 3.5 * (0.7 * 0.5 + 0.3 * 1.0);
-        const predFood = (450 * 4 + 100) * foodFactor;
-        const predDrinkAlc = 0.7 * 3 * (95 * foodFactor) * 4;
-        const predDrinkSoft = 0.3 * 2 * (45 * foodFactor) * 4;
-        const predDrink = predDrinkAlc + predDrinkSoft;
-        const predActivities = 700 * foodFactor;
-        const predPerPerson = predAccom + predFood + predDrink + predActivities;
-        const predConfCost = CONFERENCE_COST[nextSwag.year] || 300000;
-        const predEconTotal = predPerPerson * predAtt + predConfCost;
+
+        // Ekonomisk prognos – samma modell som historiken
+        const econ = economyModel(nextSwag.year, predAtt);
 
         document.getElementById("forecastText").innerHTML = `
         <div style="padding:1rem;">
             <h3 style="color:var(--primary);margin-bottom:0.5rem;">Mensa SWAG ${nextSwag.year} – ${nextSwag.location}</h3>
             <p><strong>Datum:</strong> ${swagDateStr} (Kristi himmelsfärdshelgen)</p>
+            <p><strong>Bokning öppnar:</strong> ${bookingStr} (normalt första lördagen i februari) – <a href="https://swag.mensa.se" target="_blank">swag.mensa.se</a></p>
             <p><strong>Uppskattade deltagare:</strong> ~${predAtt.toLocaleString("sv-SE")}</p>
-            <p><strong>Uppskattade medlemmar:</strong> ~${predMem.toLocaleString("sv-SE")}</p>
+            <p><strong>${memKnown ? "Medlemmar" : "Uppskattade medlemmar"}:</strong> ${memKnown ? "" : "~"}${predMem.toLocaleString("sv-SE")}</p>
             <p><strong>Förväntad deltagarandel:</strong> ~${predPct}%</p>
-            <p><strong>Uppskattad ekonomisk omsättning:</strong> ~${(predEconTotal / 1000000).toFixed(1)} MSEK</p>
-            <p style="color:var(--muted);font-size:0.85rem;">(~${Math.round(predPerPerson).toLocaleString("sv-SE")} SEK/person, hotellpris-trend ~${predHotel} SEK/natt)</p>
-            <p style="margin-top:0.8rem;color:var(--muted);font-size:0.85rem;">Baserat på linjär trend sedan 2010 (exkl. pandemiår).</p>
+            <p><strong>Uppskattad ekonomisk omsättning:</strong> ~${(econ.total / 1000000).toFixed(1)} MSEK</p>
+            <p style="color:var(--muted);font-size:0.85rem;">(~${econ.perPerson.toLocaleString("sv-SE")} SEK/person, hotellpris ${econ.hotelEstimated ? "enligt trend " : ""}~${econ.hotelPrice.toLocaleString("sv-SE")} SEK/natt, löpande priser)</p>
+            <p style="margin-top:0.8rem;color:var(--muted);font-size:0.85rem;">Baserat på linjär trend sedan ${TREND_START_YEAR} (exkl. pandemiår), samma som i graferna ovan.</p>
         </div>`;
       }
 
@@ -2125,12 +2570,10 @@
           "Sön",
           "Mån",
         ];
+        // Uppskattningar, inga mätvärden. Varje rad summerar till 100%.
         // Ankomst: % som anländer respektive dag
-        // Kumulativt: mån ~3%, tis ~10%, ons ~70%, tors ~95%, fre 100%
-        const arrival = [0, 3, 7, 60, 25, 5, 0, 0, 0];
-        // Avresa: % som åker respektive dag
-        const departure = [0, 0, 0, 0, 0, 1, 4, 5, 85, 5];
-        // Justera: avresa börjar tors (index 4)
+        const arrival = [0, 3, 12, 60, 20, 5, 0, 0, 0];
+        // Avresa: % som reser hem respektive dag
         const dep = [0, 0, 0, 0, 1, 4, 5, 85, 5];
 
         // SWAG pågår ons–sön (index 3–7)
@@ -2144,8 +2587,8 @@
               {
                 label: "Ankomst (%)",
                 data: arrival,
-                borderColor: "#1a237e",
-                backgroundColor: "rgba(26,35,126,0.1)",
+                borderColor: primaryLineColor(),
+                backgroundColor: primaryFillColor(0.1),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 4,
@@ -2177,9 +2620,13 @@
             plugins: {
               title: {
                 display: true,
-                text: "Ankomst & avresa under Mensa SWAG-veckan",
+                text: "Ankomst & avresa under Mensa SWAG-veckan (uppskattning)",
               },
               legend: { position: "bottom" },
+              tooltip: {
+                // Bakgrundsfältet ska inte synas som ett värde i tooltipen
+                filter: (item) => item.datasetIndex !== 2,
+              },
             },
             scales: {
               y: { min: 0, title: { display: true, text: "%" } },
@@ -2187,10 +2634,6 @@
             },
           },
         });
-
-        // Göm andra grafen (vi använder bara en nu)
-        document.getElementById("departureChart").parentElement.style.display =
-          "none";
       }
 
       // ============================================================
@@ -2215,47 +2658,71 @@
         2026: 300000,
       };
 
-      function estimateEconomy(year) {
+      // Prisnivå för grundbeloppen nedan (mat, dryck, aktiviteter)
+      const ECONOMY_PRICE_YEAR = 2024;
+
+      // Konferenskostnad för ett år. Saknas året används närmaste kända år,
+      // inflationsjusterat med KPI.
+      function conferenceCostFor(year) {
+        if (CONFERENCE_COST[year]) return CONFERENCE_COST[year];
+        const years = Object.keys(CONFERENCE_COST).map(Number);
+        const nearest = years.reduce((best, y) =>
+          Math.abs(y - year) < Math.abs(best - year) ? y : best,
+        );
+        return Math.round(
+          adjustForInflation(CONFERENCE_COST[nearest], nearest, year),
+        );
+      }
+
+      // Hotellpris för ett år: angivet pris, annars hotellprisets trend
+      // (samma trend som prognosen), aldrig lägre än senast kända pris.
+      function hotelPriceFor(year) {
         const d = DATA.find((e) => e.year === year);
-        if (!d || !d.attendees || d.attendees === 0 || d.cancelled) return null;
+        if (d && d.hotelPrice) return { price: d.hotelPrice, estimated: false };
+        const known = DATA.filter((e) => e.hotelPrice);
+        const last = known[known.length - 1];
+        const reg = hotelPriceTrend();
+        const trend = Math.round(reg.slope * year + reg.intercept);
+        return {
+          price: year > last.year ? Math.max(last.hotelPrice, trend) : trend,
+          estimated: true,
+        };
+      }
 
-        const attendees = d.attendees;
-        const hotelBase = d.hotelPrice || 1200;
-        const confCost = CONFERENCE_COST[year] || 250000;
+      // Ekonomimodell – samma beräkning för historik och prognos.
+      // Alla belopp i löpande priser för det aktuella året.
+      function economyModel(year, attendees) {
+        const hotel = hotelPriceFor(year);
+        const confCost = conferenceCostFor(year);
+        // Mat, dryck och aktiviteter: grundbelopp i 2024 års priser, KPI-justerade
+        const priceFactor = kpiFor(year) / kpiFor(ECONOMY_PRICE_YEAR);
 
-        // Boende: snitt 3.5 nätter, dubbelrum (standardpris = hotelBase)
+        // Boende: snitt 3.5 nätter, standardrum = hotellpriset
         // ~70% delar rum (halva priset), ~30% bor ensamma (fullt pris)
-        // Övrig mix: ~15% billigare (vandrarhem/tält), ~15% dyrare (suite) – tar ut varandra
-        const avgAccom = hotelBase * 3.5 * (0.7 * 0.5 + 0.3 * 1.0); // 70% delar, 30% ensamma
+        const avgAccom = hotel.price * 3.5 * (0.7 * 0.5 + 0.3 * 1.0);
 
-        // Mat: ~4 dagar, snitt 450 SEK/dag + 100 extra lördagen (bankett/buffé)
-        // Frukost ingår normalt i hotellpriset (historiskt), exkl. från ~2025+
-        const foodFactor = hotelBase / 1350; // skala med hotellpris som proxy för prisnivå
-        const avgFood = (450 * 4 + 100) * foodFactor;
+        // Mat: ~4 dagar à 450 SEK + 100 extra lördagen (bankett/buffé)
+        const avgFood = (450 * 4 + 100) * priceFactor;
 
-        // Dryck: alla dricker något (alkohol, läsk, kaffe etc.)
-        // 70% dricker alkohol (snitt 3/kväll à 95 SEK), 30% alkoholfritt (snitt 2/kväll à 45 SEK)
-        // 4 kvällar
-        const avgDrinkAlcohol = 0.7 * 3 * (95 * foodFactor) * 4;
-        const avgDrinkSoft = 0.3 * 2 * (45 * foodFactor) * 4;
-        const avgDrink = avgDrinkAlcohol + avgDrinkSoft;
+        // Dryck, 4 kvällar: 70% alkohol (3/kväll à 95 SEK),
+        // 30% alkoholfritt (2/kväll à 45 SEK)
+        const avgDrink = (0.7 * 3 * 95 * 4 + 0.3 * 2 * 45 * 4) * priceFactor;
 
-        // Aktiviteter, shopping & transport: snitt 700 SEK per person (taxi, utflykter, merch etc.)
-        const avgActivities = 700 * foodFactor;
+        // Aktiviteter, shopping & transport: 700 SEK per person
+        const avgActivities = 700 * priceFactor;
 
-        // Per person totalt
         const perPerson = avgAccom + avgFood + avgDrink + avgActivities;
-
-        // Totalt
-        const totalParticipants = perPerson * attendees;
-        const total = totalParticipants + confCost;
+        const total = perPerson * attendees + confCost;
 
         return {
           year,
           attendees,
-          hotelBase,
+          hotelPrice: hotel.price,
+          hotelEstimated: hotel.estimated,
           perPerson: Math.round(perPerson),
           total: Math.round(total),
+          // Samma belopp i KPI_BASE_YEAR års penningvärde
+          totalReal: Math.round(adjustForInflation(total, year, KPI_BASE_YEAR)),
           confCost,
           breakdown: {
             boende: Math.round(avgAccom * attendees),
@@ -2267,20 +2734,25 @@
         };
       }
 
+      function estimateEconomy(year) {
+        const d = DATA.find((e) => e.year === year);
+        if (!d || !hasAttendance(d)) return null;
+        return economyModel(year, d.attendees);
+      }
+
       function renderEconomyCharts() {
-        const years = DATA.filter(
-          (d) =>
-            d.year >= 2004 && d.attendees && d.attendees > 0 && !d.cancelled,
-        );
+        // Från 2004 finns hotellpriser
+        const years = DATA.filter((d) => d.year >= 2004 && hasAttendance(d));
         const estimates = years
           .map((d) => estimateEconomy(d.year))
           .filter(Boolean);
 
         if (estimates.length === 0) return;
 
-        // Total ekonomisk påverkan per år
+        // Total ekonomisk påverkan per år (tusen SEK)
         const labels = estimates.map((e) => e.year);
-        const totals = estimates.map((e) => Math.round(e.total / 1000)); // i tusen SEK
+        const totals = estimates.map((e) => Math.round(e.total / 1000));
+        const totalsReal = estimates.map((e) => Math.round(e.totalReal / 1000));
 
         new Chart(document.getElementById("economyChart"), {
           type: "bar",
@@ -2288,10 +2760,22 @@
             labels,
             datasets: [
               {
-                label: "Total (tusen SEK)",
+                label: "Löpande priser (tkr)",
                 data: totals,
                 backgroundColor: "rgba(46,125,50,0.7)",
                 borderRadius: 3,
+                order: 2,
+              },
+              {
+                label: `${KPI_BASE_YEAR} års penningvärde (tkr)`,
+                data: totalsReal,
+                type: "line",
+                borderColor: "#ff5722",
+                backgroundColor: "#ff5722",
+                pointRadius: 2,
+                tension: 0.2,
+                fill: false,
+                order: 1,
               },
             ],
           },
@@ -2303,7 +2787,7 @@
                 display: true,
                 text: "Uppskattad total ekonomisk påverkan",
               },
-              legend: { display: false },
+              legend: { position: "bottom" },
             },
             scales: {
               y: { min: 0, title: { display: true, text: "Tusen SEK" } },
@@ -2339,12 +2823,14 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: "nearest", intersect: true },
             plugins: {
               title: {
                 display: true,
                 text: `Fördelning ${latest.year} (${latest.attendees} deltagare)`,
               },
-              legend: { position: "bottom" },
+              // Ringdiagrammet behåller vanliga färgrutor i legenden
+              legend: { position: "bottom", labels: { usePointStyle: false } },
               tooltip: {
                 callbacks: {
                   label: function (context) {
@@ -2386,8 +2872,12 @@
 
         // Summering
         const totalAll = estimates.reduce((s, e) => s + e.total, 0);
+        const totalAllReal = estimates.reduce((s, e) => s + e.totalReal, 0);
         document.getElementById("economyNote").innerHTML =
-          `📈 <strong>Senaste Mensa SWAG (${latest.year}):</strong> ~${(latest.total / 1000000).toFixed(1)} MSEK total uppskattad omsättning. Per person: ~${latest.perPerson.toLocaleString("sv-SE")} SEK. <strong>Totalt sedan 2004:</strong> ~${(totalAll / 1000000).toFixed(1)} MSEK. <em>Modell baserad på hotellpris som proxy för prisnivå, normalfördelad spridning.</em>`;
+          `📈 <strong>Senaste Mensa SWAG (${latest.year}):</strong> ~${(latest.total / 1000000).toFixed(1)} MSEK total uppskattad omsättning. Per person: ~${latest.perPerson.toLocaleString("sv-SE")} SEK. <strong>Totalt sedan ${estimates[0].year}:</strong> ~${(totalAll / 1000000).toFixed(1)} MSEK i löpande priser, ~${(totalAllReal / 1000000).toFixed(1)} MSEK i ${KPI_BASE_YEAR} års penningvärde. <em>Snittvärden per person, ingen spridning modelleras. Inflation enligt KPI (SCB).</em>`;
+        document
+          .querySelectorAll(".kpi-base-year")
+          .forEach((el) => (el.textContent = KPI_BASE_YEAR));
       }
 
       // ============================================================
@@ -2396,6 +2886,26 @@
       let mapInstance = null;
       let mapMarkers = [];
       let mapLine = null;
+      let mapLegend = null;
+      let updateMap = null; // sätts av setupMapSliders
+
+      function renderMapLegend(withLoc) {
+        const el = document.getElementById("mapLegend");
+        if (!el) return;
+        if (withLoc.length === 0) {
+          el.innerHTML = "Inga orter i valt intervall";
+          return;
+        }
+        const first = withLoc[0].year;
+        const last = withLoc[withLoc.length - 1].year;
+        const hasCancelled = withLoc.some((d) => d.cancelled);
+        const stops = [0, 0.5, 1].map((r) => yearColor(r * 100, 100));
+        el.innerHTML = `
+          <strong>År</strong>
+          <div class="bar" style="background:linear-gradient(90deg,${stops.join(",")})"></div>
+          <div class="ends"><span>${first}</span><span>${last}</span></div>
+          ${hasCancelled ? '<div style="margin-top:0.3rem"><span class="dot" style="background:#c62828"></span>Inställd</div>' : ""}`;
+      }
 
       function renderMap(minYear, maxYear) {
         if (!minYear) minYear = 1995;
@@ -2416,6 +2926,15 @@
             maxZoom: 12,
             className: "map-tiles",
           }).addTo(mapInstance);
+
+          // Färgförklaring i kartans hörn
+          mapLegend = L.control({ position: "bottomright" });
+          mapLegend.onAdd = () => {
+            const div = L.DomUtil.create("div", "map-legend");
+            div.id = "mapLegend";
+            return div;
+          };
+          mapLegend.addTo(mapInstance);
         }
 
         // Clear existing markers
@@ -2481,6 +3000,8 @@
           }).addTo(mapInstance);
         }
 
+        renderMapLegend(withLoc);
+
         // Auto-zoom till att passa alla punkter med marginal
         if (coords.length > 0) {
           mapInstance.fitBounds(coords, { padding: [30, 30] });
@@ -2523,11 +3044,7 @@
           const inRange = DATA.filter(
             (d) => d.year >= minY && d.year <= maxY && d.location,
           );
-          const held = inRange.filter(
-            (d) =>
-              (d.attendees && d.attendees > 0 && !d.cancelled) ||
-              (!d.cancelled && d.attendees == null && hasSwagPassed(d.year)),
-          ).length;
+          const held = inRange.filter(isHeld).length;
           const cancelled = inRange.filter((d) => d.cancelled).length;
           const upcoming = inRange.filter(
             (d) =>
@@ -2547,6 +3064,7 @@
 
         sliderMin.addEventListener("input", update);
         sliderMax.addEventListener("input", update);
+        updateMap = update;
         update();
       }
 
@@ -2554,12 +3072,11 @@
       // FUN FACTS
       // ============================================================
       function renderFunFacts() {
-        const valid = DATA.filter(
-          (d) => d.attendees && d.attendees > 0 && !d.cancelled,
-        );
+        const valid = DATA.filter(hasAttendance);
         const totalAttendees = valid.reduce((s, d) => s + d.attendees, 0);
+        // Orter där en Mensa SWAG genomförts (samma definition som nyckeltalen)
         const uniqueLocations = new Set(
-          DATA.filter((d) => d.location).map((d) => d.location),
+          DATA.filter(isHeld).map((d) => d.location),
         ).size;
         const memberGrowth =
           DATA.filter((d) => d.members).slice(-1)[0].members -
@@ -2568,7 +3085,7 @@
         // SWAG fun facts
         const swagFacts = [
           `${totalAttendees.toLocaleString("sv-SE")} totala Mensa SWAG-deltagare genom åren`,
-          `${uniqueLocations} unika platser`,
+          `${uniqueLocations} unika orter`,
           `+${memberGrowth.toLocaleString("sv-SE")} medlemmar sedan starten`,
           `Rum 107 föddes i Örebro 2014`,
           `Mensa SWAG 2017: Polisen kallades till festen`,
@@ -2619,6 +3136,8 @@
       // TABELL
       // ============================================================
       function renderTable() {
+        document.getElementById("dataTitle").textContent =
+          `All data (${DATA[0].year}–${DATA[DATA.length - 1].year})`;
         const tbody = document.querySelector("#dataTable tbody");
         tbody.innerHTML = DATA.slice()
           .reverse()
@@ -2654,10 +3173,110 @@
       // INIT
       // ============================================================
 
-      // Apply dark mode BEFORE rendering (charts + map need this)
-      // Utan sparat val följer sidan enhetens tema. Ett sparat val som
+      // Markering av det som tooltipen visar: ett svagt fält bakom hela
+      // kategorin (året/stapeln) som pekaren står på. Gäller alla grafer
+      // med axlar. Ringdiagram markeras med utskjuten sektor i stället.
+      const hoverBandPlugin = {
+        id: "hoverBand",
+        beforeDatasetsDraw(chart) {
+          const active = chart.getActiveElements();
+          if (!active.length || !chart.scales) return;
+          const indexAxis = chart.options.indexAxis === "y" ? "y" : "x";
+          const scale = chart.scales[indexAxis];
+          if (!scale || scale.type !== "category") return;
+          const n = chart.data.labels.length;
+          const idx = active[0].index;
+          const pos = scale.getPixelForValue(idx);
+          const step =
+            n > 1
+              ? Math.abs(scale.getPixelForValue(1) - scale.getPixelForValue(0))
+              : indexAxis === "x"
+                ? scale.width
+                : scale.height;
+          const { ctx, chartArea: a } = chart;
+          ctx.save();
+          ctx.fillStyle = document.body.classList.contains("dark")
+            ? "rgba(255,255,255,0.08)"
+            : "rgba(26,35,126,0.07)";
+          if (indexAxis === "x") {
+            const x0 = Math.max(a.left, pos - step / 2);
+            const x1 = Math.min(a.right, pos + step / 2);
+            ctx.fillRect(x0, a.top, x1 - x0, a.bottom - a.top);
+          } else {
+            const y0 = Math.max(a.top, pos - step / 2);
+            const y1 = Math.min(a.bottom, pos + step / 2);
+            ctx.fillRect(a.left, y0, a.right - a.left, y1 - y0);
+          }
+          ctx.restore();
+        },
+      };
+      Chart.register(hoverBandPlugin);
+
+      // Hela kategorin under pekaren aktiveras (alla dataserier för året),
+      // och aktiva punkter/staplar förstärks.
+      Chart.defaults.interaction.mode = "index";
+      Chart.defaults.interaction.intersect = false;
+      Chart.defaults.elements.point.hoverRadius = 7;
+      Chart.defaults.elements.point.hoverBorderWidth = 3;
+      Chart.defaults.elements.bar.hoverBorderWidth = 2;
+      Chart.defaults.elements.arc.hoverOffset = 12;
+
+      // Legend: linjeserier visas som en linjebit (streckad om serien är
+      // streckad), staplar som fyllda rutor. Linjebiten ritas som en liten
+      // bild, eftersom Chart.js inte streckar punktstilen "line".
+      function legendLineImage(color, dash) {
+        const c = document.createElement("canvas");
+        c.width = 30;
+        c.height = 10;
+        const ctx = c.getContext("2d");
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.setLineDash(dash || []);
+        ctx.beginPath();
+        ctx.moveTo(1, 5);
+        ctx.lineTo(29, 5);
+        ctx.stroke();
+        return c;
+      }
+      const defaultLegendLabels =
+        Chart.defaults.plugins.legend.labels.generateLabels;
+      Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      // Reservera plats för hela linjebiten (30 px) före texten
+      Chart.defaults.plugins.legend.labels.pointStyleWidth = 30;
+      Chart.defaults.plugins.legend.labels.generateLabels = (chart) =>
+        defaultLegendLabels(chart).map((item) => {
+          const ds = chart.data.datasets[item.datasetIndex];
+          const type = (ds && ds.type) || chart.config.type;
+          if (type === "line") {
+            const color =
+              typeof ds.borderColor === "string"
+                ? ds.borderColor
+                : item.strokeStyle;
+            item.pointStyle = legendLineImage(color, ds.borderDash);
+          } else {
+            item.pointStyle = "rect";
+          }
+          return item;
+        });
+
+      // Tema: utan sparat val följer sidan enhetens tema. Ett sparat val som
       // ändå matchar enheten raderas, så att sidan börjar följa enheten igen.
       const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const darkToggle = document.getElementById("darkModeToggle");
+
+      function applyTheme(isDark) {
+        document.body.classList.toggle("dark", isDark);
+        darkToggle.textContent = isDark ? "☀️ Ljust" : "🌙 Mörkt";
+        darkToggle.setAttribute("aria-pressed", String(isDark));
+        Chart.defaults.color = isDark ? "#e0e0e0" : "#666";
+        Chart.defaults.borderColor = isDark
+          ? "rgba(255,255,255,0.1)"
+          : "rgba(0,0,0,0.1)";
+        Chart.defaults.elements.bar.hoverBorderColor = isDark
+          ? "#ffffff"
+          : "#212121";
+      }
+
       (function () {
         let saved = localStorage.getItem("darkMode");
         const prefersDark = darkMediaQuery.matches;
@@ -2665,157 +3284,179 @@
           localStorage.removeItem("darkMode");
           saved = null;
         }
-        const isDark = saved === null ? prefersDark : saved === "true";
-        if (isDark) {
-          document.body.classList.add("dark");
-          document.getElementById("darkModeToggle").textContent = "☀️ Ljust";
-          Chart.defaults.color = "#e0e0e0";
-          Chart.defaults.borderColor = "rgba(255,255,255,0.1)";
-        }
+        applyTheme(saved === null ? prefersDark : saved === "true");
       })();
 
-      renderStats();
-      renderMembersChart();
-      renderAttendeesChart();
-      renderPercentChart();
-      renderGrowthChart();
-      renderPenetrationChart();
-      renderTop5();
-      renderRecent5();
-      renderHalfSwagChart();
-      renderHalfVsFullChart();
-      renderForecast();
-      renderArrivalDeparture();
-      renderEconomyCharts();
-      renderMap();
-      setupMapSliders();
-      renderFunFacts();
-      renderTable();
+      // Ritar alla grafer. Körs igen vid temabyte (ingen omladdning behövs).
+      function renderAll() {
+        Object.values(Chart.instances).forEach((c) => c.destroy());
+        renderStats();
+        renderMembersChart();
+        renderAttendeesChart();
+        renderPercentChart();
+        renderGrowthChart();
+        renderPenetrationChart();
+        renderTop5();
+        renderRecent5();
+        renderHalfSwagChart();
+        renderHalfVsFullChart();
+        renderForecast();
+        renderArrivalDeparture();
+        renderEconomyCharts();
+        if (updateMap) updateMap();
+        else setupMapSliders();
+        renderFunFacts();
+        renderTable();
+      }
 
-      // Dynamiskt footer-år (senaste året med komplett data)
+      renderAll();
+
+      // Footer: datum då sidan senast ändrades + senaste år med komplett data
       const lastDataYear = DATA.filter(
-        (d) => d.members != null && d.attendees != null && !d.cancelled,
+        (d) => d.members != null && hasAttendance(d),
       ).slice(-1)[0];
       document.getElementById("lastUpdatedYear").textContent = lastDataYear
         ? lastDataYear.year
-        : new Date().getFullYear();
+        : "–";
+      const modified = new Date(document.lastModified);
+      document.getElementById("lastUpdated").textContent = isNaN(modified)
+        ? "–"
+        : modified.toLocaleDateString("sv-SE", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
 
       // ============================================================
       // COUNTDOWNS
       // ============================================================
-      function getThirdWeekendNovember(year) {
-        // Tredje fredagen i november
-        let d = new Date(year, 10, 1); // 1 nov
-        while (d.getDay() !== 5) d.setDate(d.getDate() + 1); // första fredagen
-        d.setDate(d.getDate() + 14); // tredje fredagen
-        return d;
-      }
-
-      function getSwagBookingOpen(year) {
-        // Första lördagen i maj kl 12:00 (lördagen före Mensa SWAG)
-        // Egentligen: lördagen 1 vecka före SWAG-onsdag
-        const swagWed = new Date(
-          ascensionDay(year).getTime() - 1 * 24 * 60 * 60 * 1000,
-        );
-        const bookingSat = new Date(
-          swagWed.getTime() - 4 * 24 * 60 * 60 * 1000,
-        ); // lördagen innan ons
-        bookingSat.setHours(12, 0, 0, 0);
-        return bookingSat;
-      }
+      const SWAG_URL = "https://swag.mensa.se";
 
       function renderCountdowns() {
         const now = new Date();
         const thisYear = now.getFullYear();
         const container = document.getElementById("countdowns");
 
-        // Mensa SWAG datum
-        const swagStart = new Date(
-          ascensionDay(thisYear).getTime() - 1 * 24 * 60 * 60 * 1000,
-        ); // onsdag
-        const swagEnd = new Date(
-          ascensionDay(thisYear).getTime() + 2 * 24 * 60 * 60 * 1000,
-        ); // söndag kväll
-        swagEnd.setHours(23, 59, 59);
-        const postSwagEnd = new Date(
-          swagEnd.getTime() + 7 * 24 * 60 * 60 * 1000,
-        ); // en vecka efter
-
-        // Halvårsträff
-        const halfSwag = getThirdWeekendNovember(thisYear);
-
-        // Bokning öppnar
-        const bookingOpen = getSwagBookingOpen(thisYear);
-
-        // Nästa års SWAG om årets passerat
-        const nextSwagStart = new Date(
-          ascensionDay(thisYear + 1).getTime() - 1 * 24 * 60 * 60 * 1000,
-        );
-
-        const items = [];
-
         function daysUntil(target) {
-          const diff = target.getTime() - now.getTime();
-          return Math.ceil(diff / (1000 * 60 * 60 * 24));
+          const startOfToday = new Date(now);
+          startOfToday.setHours(0, 0, 0, 0);
+          const t = new Date(target);
+          t.setHours(0, 0, 0, 0);
+          return Math.round((t - startOfToday) / DAY_MS);
         }
 
         function formatCountdown(target) {
           const days = daysUntil(target);
-          if (days > 30) return `${days} dagar`;
           if (days > 1) return `${days} dagar`;
           if (days === 1) return "Imorgon!";
           if (days === 0) return "IDAG!";
           return null; // passerat
         }
 
-        // Logik: visa ett steg i taget för Mensa SWAG
+        const items = [];
+
+        // Vilket SWAG-år gäller? Årets fram till en vecka efter SWAG,
+        // sedan nästa års.
+        const thisSwag = swagDates(thisYear);
+        const postSwagEnd = addDays(thisSwag.end, 7);
+        const swagYear = now <= postSwagEnd ? thisYear : thisYear + 1;
+        const { start: swagStart, end: swagEnd } = swagDates(swagYear);
+        const bookingOpen = bookingOpenDate(swagYear);
+        const lastBooking = lastBookingDate(swagYear);
+
+        // Tooltip-text: "5–9 maj" eller "30 april – 3 maj"
+        function dateRange(start, end) {
+          const day = { day: "numeric" };
+          const dayMonth = { day: "numeric", month: "long" };
+          return start.getMonth() === end.getMonth()
+            ? `${start.toLocaleDateString("sv-SE", day)}–${end.toLocaleDateString("sv-SE", dayMonth)}`
+            : `${start.toLocaleDateString("sv-SE", dayMonth)} – ${end.toLocaleDateString("sv-SE", dayMonth)}`;
+        }
+        function swagTitle(year) {
+          const row = DATA.find((d) => d.year === year);
+          const where = row && row.location ? ` i ${row.location}` : "";
+          const { start, end } = swagDates(year);
+          return `Mensa SWAG ${year}${where}: ${dateRange(start, end)} ${year} (ons–sön, Kristi himmelsfärdshelgen)`;
+        }
+        function halfTitle(year) {
+          const row = HALF_SWAG.find((h) => h.year === year);
+          const where = row && row.location ? ` i ${row.location}` : "";
+          const { start, end } = halfSwagDates(year);
+          return `Mensa Halvårsträff ${year}${where}: ${dateRange(start, end)} ${year} (fre–sön, tredje helgen i november)`;
+        }
+
+        // Mensa SWAG
+        if (now < swagStart) {
+          items.push({
+            label: "Mensa SWAG " + swagYear,
+            value: formatCountdown(swagStart),
+            title: swagTitle(swagYear),
+            href: SWAG_URL,
+          });
+        } else if (now <= swagEnd) {
+          items.push({
+            label: "Mensa SWAG " + swagYear,
+            value: "🎉 PÅGÅR NU!",
+            title: swagTitle(swagYear),
+            href: SWAG_URL,
+          });
+        } else {
+          items.push({
+            label: "Post-SWAG depression",
+            value: "😢 Håll ut!",
+            title: `Nästa: ${swagTitle(swagYear + 1)}`,
+          });
+        }
+
+        // Bokning (öppnar första lördagen i februari, sista ordinarie
+        // bokningsdag ungefär en vecka före)
         if (now < bookingOpen) {
           items.push({
             label: "Bokning öppnar",
             value: formatCountdown(bookingOpen),
+            title: `Bokningen till Mensa SWAG ${swagYear} öppnar ${bookingOpen.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })} på swag.mensa.se (normalt första lördagen i februari)`,
+            href: SWAG_URL,
           });
-        } else if (now < swagStart) {
+        } else if (now <= lastBooking) {
           items.push({
-            label: "Mensa SWAG " + thisYear,
-            value: formatCountdown(swagStart),
-          });
-        } else if (now <= swagEnd) {
-          items.push({
-            label: "Mensa SWAG " + thisYear,
-            value: "🎉 PÅGÅR NU!",
-          });
-        } else if (now <= postSwagEnd) {
-          items.push({ label: "Post-SWAG depression", value: "😢 Håll ut!" });
-        } else {
-          // Årets SWAG passerat, visa nästa år
-          items.push({
-            label: "Mensa SWAG " + (thisYear + 1),
-            value: formatCountdown(nextSwagStart),
+            label: "Sista bokningsdag (ca)",
+            value: formatCountdown(lastBooking),
+            title: `Sista ordinarie bokningsdag ca ${lastBooking.toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}. Boka i tid för t-shirts och annat som ska tryckas. Det går att boka på plats och till aktiviteter även senare.`,
+            href: SWAG_URL,
           });
         }
 
-        // Halvårsträff
-        if (now < halfSwag) {
+        // Mensa Halvårsträff (fre–sön, tredje helgen i november)
+        const half = halfSwagDates(thisYear);
+        if (now < half.start) {
           items.push({
             label: "Mensa Halvårsträff",
-            value: formatCountdown(halfSwag),
+            value: formatCountdown(half.start),
+            title: halfTitle(thisYear),
+          });
+        } else if (now <= half.end) {
+          items.push({
+            label: "Mensa Halvårsträff",
+            value: "🎉 PÅGÅR NU!",
+            title: halfTitle(thisYear),
           });
         } else {
-          const nextHalf = getThirdWeekendNovember(thisYear + 1);
-          if (daysUntil(nextHalf) > 0) {
-            items.push({
-              label: "Mensa Halvårsträff " + (thisYear + 1),
-              value: formatCountdown(nextHalf),
-            });
-          }
+          items.push({
+            label: "Mensa Halvårsträff " + (thisYear + 1),
+            value: formatCountdown(halfSwagDates(thisYear + 1).start),
+            title: halfTitle(thisYear + 1),
+          });
         }
 
         container.innerHTML = items
           .filter((i) => i.value)
-          .map(
-            (i) =>
-              `<div class="countdown-item"><div class="cd-label">${i.label}</div><div class="cd-value">${i.value}</div></div>`,
-          )
+          .map((i) => {
+            const inner = `<div class="cd-label">${i.label}</div><div class="cd-value">${i.value}</div>`;
+            const title = i.title ? ` title="${i.title}"` : "";
+            return i.href
+              ? `<a class="countdown-item" href="${i.href}" target="_blank"${title}>${inner}</a>`
+              : `<div class="countdown-item"${title}>${inner}</div>`;
+          })
           .join("");
       }
 
@@ -2824,25 +3465,23 @@
       // ============================================================
       // DARK MODE (toggle-knapp)
       // ============================================================
-      const darkToggle = document.getElementById("darkModeToggle");
-
       darkToggle.addEventListener("click", () => {
-        document.body.classList.toggle("dark");
-        const isDark = document.body.classList.contains("dark");
-        darkToggle.textContent = isDark ? "☀️ Ljust" : "🌙 Mörkt";
+        const isDark = !document.body.classList.contains("dark");
         // Spara bara om valet avviker från enhetens tema
         if (isDark === darkMediaQuery.matches) {
           localStorage.removeItem("darkMode");
         } else {
           localStorage.setItem("darkMode", isDark);
         }
-        // Reload page to re-render charts and map with correct colors
-        location.reload();
+        applyTheme(isDark);
+        renderAll();
       });
 
       // Följ enhetens tema live om användaren inte gjort ett eget val
-      darkMediaQuery.addEventListener("change", () => {
-        if (localStorage.getItem("darkMode") === null) location.reload();
+      darkMediaQuery.addEventListener("change", (e) => {
+        if (localStorage.getItem("darkMode") !== null) return;
+        applyTheme(e.matches);
+        renderAll();
       });
     </script>
   </body>

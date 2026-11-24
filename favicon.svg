@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Mensa Sverige – SWAG-statistik</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a237e" />
+      <stop offset="1" stop-color="#3949ab" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)" />
+  <rect x="12" y="36" width="10" height="16" rx="2" fill="#7986cb" />
+  <rect x="27" y="26" width="10" height="26" rx="2" fill="#ffc107" />
+  <rect x="42" y="14" width="10" height="38" rx="2" fill="#ff5722" />
+  <path
+    d="M10 30 L27 20 L40 14 L54 8"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-dasharray="5 4"
+  />
+</svg>
