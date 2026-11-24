@@ -178,7 +178,8 @@ Ge även `<canvas>` en beskrivning för skärmläsare: `role="img" aria-label=".
 
 ### Konventioner
 
-- **Färger:** Blå (`#1a237e`, i mörkt läge `primaryLineColor()`) = medlemmar/SWAG, Orange (`#ff5722`) = procent, Grön (`#2e7d32`) = penetration, Lila (`#7c4dff`) = halvårsträff, Gul streckad (`#ffc107`) = trendlinjer
+- **Färger:** Använd paletten via `C()` (t.ex. `C().primary`, `C().bar`, `C().trend`) och `fill(färg, alfa)` för fyllda ytor – aldrig hårdkodade färger. `PALETTE` har en ljus och en mörk variant där varje färg har minst 3:1 kontrast mot kortets bakgrund (WCAG 2.1 SC 1.4.11). Text ska ha minst 4.5:1 (stor text 3:1). Kontrollera nya färger med `contrastRatio(a, b)`. Blå = medlemmar/SWAG, Orange = procent, Grön = penetration/ekonomi, Lila = halvårsträff, Guld/gul streckad = trendlinjer
+- **Helskärm:** Alla `.chart-container` med canvas får automatiskt en helskärmsknapp, inget behöver göras per graf
 - **Trend-box:** Grön bakgrund, visar R² och prognos
 - **Trender:** Använd `TREND_START_YEAR` och `FORECAST_HORIZON`, eller `membersTrend()`/`attendeesTrend()`, så att alla prognoser stämmer överens
 - **Pandemiår:** Exkluderas med `!d.cancelled` i filter

@@ -111,11 +111,12 @@
         --primary: #1a237e;
         --primary-light: #3949ab;
         --accent: #ffc107;
-        --accent2: #ff5722;
+        /* Kontrast enligt WCAG 2.1 AA: text 4.5:1, stor text och grafik 3:1 */
+        --accent2: #e64a19; /* 3.9:1 mot vitt, används bara som stor text */
         --bg: #fafafa;
         --card: #ffffff;
         --text: #212121;
-        --muted: #757575;
+        --muted: #616161; /* 5.9:1 mot #fafafa */
         --success: #2e7d32;
         --warning: #f57c00;
         --cancelled: #c62828;
@@ -243,6 +244,12 @@
       .chart-container {
         position: relative;
         width: 100%;
+        /* Canvasens bredd får inte trycka ut grid-kolumnen, annars kan
+           grafen inte krympa tillbaka (t.ex. efter helskärm) */
+        min-width: 0;
+      }
+      .grid-2 > * {
+        min-width: 0;
       }
       .chart-tall {
         height: 350px;
@@ -401,9 +408,10 @@
         --bg: #121212;
         --card: #1e1e1e;
         --text: #e0e0e0;
-        --muted: #9e9e9e;
-        --primary: #5c6bc0;
-        --primary-light: #7986cb;
+        --muted: #9e9e9e; /* 6.2:1 mot kort */
+        --primary: #7986cb; /* 4.8:1 mot kort */
+        --primary-light: #9fa8da;
+        --accent2: #ff7043; /* 6.1:1 mot kort */
       }
       body.dark .map-tiles {
         filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9);
@@ -475,7 +483,7 @@
         color: #9fa8da;
       }
       body.dark footer {
-        color: #757575;
+        color: var(--muted);
       }
       body.dark code {
         background: #333;
@@ -561,6 +569,92 @@
       }
 
       /* Kartlegend */
+      /* Helskärm för grafer och karta (lager över hela skärmen) */
+      .map-wrap {
+        position: relative;
+      }
+      .fs-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        z-index: 1001; /* över Leaflets kontroller */
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        border-radius: 6px;
+        background: var(--card);
+        color: var(--text);
+        opacity: 0.85;
+        cursor: pointer;
+      }
+      .map-wrap > .fs-btn {
+        top: calc(0.5rem + 10px);
+        right: 10px;
+      }
+      .fs-btn:hover,
+      .fs-btn:focus-visible {
+        opacity: 1;
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
+      }
+      .fs-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+      body.dark .fs-btn {
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      .fs-open {
+        position: fixed !important;
+        inset: 0;
+        z-index: 3000;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 3rem 0.75rem 0.75rem;
+        background: var(--card);
+      }
+      .fs-open::before {
+        content: attr(data-fs-title);
+        position: absolute;
+        top: 0.85rem;
+        left: 1rem;
+        right: 3.5rem;
+        font-weight: 600;
+        color: var(--primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      body.dark .fs-open::before {
+        color: #9fa8da;
+      }
+      .fs-open > .fs-btn {
+        position: fixed;
+        top: 0.6rem;
+        right: 0.6rem;
+        width: 36px;
+        height: 36px;
+        opacity: 1;
+      }
+      .map-wrap.fs-open {
+        display: flex;
+        flex-direction: column;
+      }
+      .map-wrap.fs-open #map {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        margin-top: 0;
+      }
+      body.fs-lock {
+        overflow: hidden;
+      }
+
       /* Färgförklaring: en kompakt rad direkt under kartan */
       .map-legend {
         display: flex;
@@ -993,12 +1087,14 @@
           id="mapInfo"
           aria-live="polite"
         ></p>
-        <div
-          id="map"
-          role="region"
-          aria-label="Karta över Sverige med orterna för Mensa SWAG"
-        ></div>
-        <div class="map-legend" id="mapLegend"></div>
+        <div class="map-wrap">
+          <div
+            id="map"
+            role="region"
+            aria-label="Karta över Sverige med orterna för Mensa SWAG"
+          ></div>
+          <div class="map-legend" id="mapLegend"></div>
+        </div>
       </div>
 
       <!-- Mensapristagare -->
@@ -1797,14 +1893,71 @@
         return completed[completed.length - 1];
       }
 
-      // Mörkblått syns dåligt mot mörk bakgrund – ljusare blått i mörkt läge
-      function primaryLineColor() {
-        return document.body.classList.contains("dark") ? "#7986cb" : "#1a237e";
-      }
-      function primaryFillColor(alpha) {
+      // ============================================================
+      // FÄRGER – en palett per tema. Alla färger har minst 3:1 kontrast mot
+      // kortets bakgrund (WCAG 2.1 SC 1.4.11, grafiska objekt).
+      // Ljust mot #ffffff, mörkt mot #1e1e1e.
+      // ============================================================
+      const PALETTE = {
+        light: {
+          card: "#ffffff",
+          primary: "#1a237e", // 13.2:1
+          bar: "#3949ab", // 7.7:1
+          green: "#2e7d32", // 5.1:1
+          red: "#c62828", // 5.6:1
+          purple: "#7c4dff", // 4.8:1
+          orange: "#e64a19", // 3.9:1
+          trend: "#a67c00", // 3.8:1 (mörk guld, gult klarar inte 3:1 på vitt)
+          swagField: "#43a047", // 3.3:1
+          top5: ["#a67c00", "#e65100", "#d84315", "#1a237e", "#3949ab"],
+          slices: ["#1a237e", "#3949ab", "#7c4dff", "#e64a19", "#a67c00"],
+        },
+        dark: {
+          card: "#1e1e1e",
+          primary: "#7986cb", // 4.8:1
+          bar: "#7986cb", // 4.8:1
+          green: "#66bb6a", // 7.1:1
+          red: "#ef5350", // 4.8:1
+          purple: "#9575cd", // 4.5:1
+          orange: "#ff7043", // 6.1:1
+          trend: "#ffc107", // 10.2:1
+          swagField: "#81c784", // 8.3:1
+          top5: ["#ffc107", "#ffa726", "#ff7043", "#7986cb", "#9fa8da"],
+          slices: ["#7986cb", "#9fa8da", "#9575cd", "#ff7043", "#ffc107"],
+        },
+      };
+      function C() {
         return document.body.classList.contains("dark")
-          ? `rgba(121,134,203,${alpha})`
-          : `rgba(26,35,126,${alpha})`;
+          ? PALETTE.dark
+          : PALETTE.light;
+      }
+      // Hex-färg med genomskinlighet (för fyllda ytor under linjer)
+      function fill(hex, alpha) {
+        const n = parseInt(hex.slice(1), 16);
+        return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+      }
+      // Relativ luminans och kontrast enligt WCAG
+      function luminance(hex) {
+        const n = parseInt(hex.slice(1), 16);
+        const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(
+          (v) => {
+            v /= 255;
+            return v <= 0.03928
+              ? v / 12.92
+              : Math.pow((v + 0.055) / 1.055, 2.4);
+          },
+        );
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      }
+      function contrastRatio(a, b) {
+        const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+        return (hi + 0.05) / (lo + 0.05);
+      }
+      // Vit eller mörk text – den som har högst kontrast mot bakgrunden
+      function readableTextOn(bg) {
+        return contrastRatio("#ffffff", bg) >= contrastRatio("#212121", bg)
+          ? "#ffffff"
+          : "#212121";
       }
 
       function yearColor(index, total) {
@@ -1897,8 +2050,8 @@
               {
                 label: "Medlemmar",
                 data: actual,
-                borderColor: primaryLineColor(),
-                backgroundColor: primaryFillColor(0.08),
+                borderColor: C().primary,
+                backgroundColor: fill(C().primary, 0.08),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
@@ -1907,7 +2060,7 @@
               {
                 label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trend,
-                borderColor: "#ffc107",
+                borderColor: C().trend,
                 borderDash: [6, 3],
                 pointRadius: 0,
                 fill: false,
@@ -1961,14 +2114,14 @@
               {
                 label: "Deltagare",
                 data: actual,
-                backgroundColor: "rgba(26,35,126,0.7)",
+                backgroundColor: C().bar,
                 borderRadius: 3,
               },
               {
                 label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trend,
                 type: "line",
-                borderColor: "#ffc107",
+                borderColor: C().trend,
                 borderDash: [6, 3],
                 pointRadius: 0,
                 fill: false,
@@ -2026,8 +2179,8 @@
               {
                 label: "% av medlemmar som deltog",
                 data: pcts,
-                borderColor: "#ff5722",
-                backgroundColor: "rgba(255,87,34,0.1)",
+                borderColor: C().orange,
+                backgroundColor: fill(C().orange, 0.1),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
@@ -2035,7 +2188,7 @@
               {
                 label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: trendData,
-                borderColor: "#ffc107",
+                borderColor: C().trend,
                 borderDash: [6, 3],
                 pointRadius: 0,
                 fill: false,
@@ -2082,7 +2235,7 @@
         }
 
         const colors = growthData.map((v) =>
-          parseFloat(v) >= 0 ? "rgba(46,125,50,0.7)" : "rgba(198,40,40,0.7)",
+          parseFloat(v) >= 0 ? C().green : C().red,
         );
 
         new Chart(document.getElementById("growthChart"), {
@@ -2216,13 +2369,13 @@
               {
                 label: "% av kvalificerade som är medlemmar",
                 data: allActual,
-                borderColor: "#2e7d32",
-                backgroundColor: "rgba(46,125,50,0.1)",
+                borderColor: C().green,
+                backgroundColor: fill(C().green, 0.1),
                 fill: true,
                 tension: 0.3,
                 pointRadius: (ctx) => (isEst(ctx) ? 5 : 3),
                 pointBackgroundColor: (ctx) =>
-                  isEst(ctx) ? "transparent" : "#2e7d32",
+                  isEst(ctx) ? "transparent" : C().green,
                 pointBorderWidth: (ctx) => (isEst(ctx) ? 2 : 1),
                 // Streckad linje in till år med uträknad befolkning
                 segment: {
@@ -2234,7 +2387,7 @@
               {
                 label: `Trend (linjär, från ${TREND_START_YEAR})`,
                 data: allTrend,
-                borderColor: "#ffc107",
+                borderColor: C().trend,
                 borderDash: [6, 3],
                 pointRadius: 0,
                 fill: false,
@@ -2295,13 +2448,7 @@
               {
                 label: "Deltagare",
                 data: top5.map((d) => d.attendees),
-                backgroundColor: [
-                  "#ffc107",
-                  "#ff9800",
-                  "#ff5722",
-                  "#1a237e",
-                  "#3949ab",
-                ],
+                backgroundColor: C().top5,
                 borderRadius: 4,
               },
             ],
@@ -2329,7 +2476,7 @@
               {
                 label: "Deltagare",
                 data: recent5.map((d) => d.attendees),
-                backgroundColor: "#3949ab",
+                backgroundColor: C().bar,
                 borderRadius: 4,
               },
             ],
@@ -2364,7 +2511,7 @@
           {
             label: "Mensa Halvårsträff deltagare",
             data: values,
-            backgroundColor: "rgba(124,77,255,0.7)",
+            backgroundColor: C().purple,
             borderRadius: 4,
           },
         ];
@@ -2373,7 +2520,7 @@
             label: "Trend (linjär)",
             data: trendData,
             type: "line",
-            borderColor: "#ffc107",
+            borderColor: C().trend,
             borderDash: [6, 3],
             pointRadius: 0,
             fill: false,
@@ -2456,8 +2603,8 @@
           {
             label: "Halvårsträff som % av SWAG",
             data: pctData,
-            borderColor: "#7c4dff",
-            backgroundColor: "rgba(124,77,255,0.1)",
+            borderColor: C().purple,
+            backgroundColor: fill(C().purple, 0.1),
             fill: true,
             tension: 0.3,
             pointRadius: 3,
@@ -2467,7 +2614,7 @@
           datasets.push({
             label: "Trend (linjär)",
             data: trendData,
-            borderColor: "#ffc107",
+            borderColor: C().trend,
             borderDash: [6, 3],
             pointRadius: 0,
             fill: false,
@@ -2523,7 +2670,7 @@
         const recent = valid.slice(-5);
         const labels = [...recent.map((d) => `${d.year}`), `${nextSwag.year}?`];
         const values = [...recent.map((d) => d.attendees), predAtt];
-        const bgColors = [...recent.map(() => "#3949ab"), "#ffc107"];
+        const bgColors = [...recent.map(() => C().bar), C().trend];
 
         document.getElementById("forecastTitle").textContent =
           `Prognos: Mensa SWAG ${nextSwag.year} i ${nextSwag.location}`;
@@ -2607,8 +2754,8 @@
               {
                 label: "Ankomst (%)",
                 data: arrival,
-                borderColor: primaryLineColor(),
-                backgroundColor: primaryFillColor(0.1),
+                borderColor: C().primary,
+                backgroundColor: fill(C().primary, 0.1),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 4,
@@ -2616,8 +2763,8 @@
               {
                 label: "Avresa (%)",
                 data: dep,
-                borderColor: "#ff5722",
-                backgroundColor: "rgba(255,87,34,0.1)",
+                borderColor: C().orange,
+                backgroundColor: fill(C().orange, 0.1),
                 fill: true,
                 tension: 0.3,
                 pointRadius: 4,
@@ -2625,8 +2772,8 @@
               {
                 label: "Mensa SWAG pågår",
                 data: swagActive,
-                borderColor: "rgba(76,175,80,0.4)",
-                backgroundColor: "rgba(76,175,80,0.08)",
+                borderColor: C().swagField,
+                backgroundColor: fill(C().swagField, 0.08),
                 fill: true,
                 borderDash: [4, 4],
                 pointRadius: 0,
@@ -2782,7 +2929,7 @@
               {
                 label: "Löpande priser (tkr)",
                 data: totals,
-                backgroundColor: "rgba(46,125,50,0.7)",
+                backgroundColor: C().green,
                 borderRadius: 3,
                 order: 2,
               },
@@ -2790,8 +2937,8 @@
                 label: `${KPI_BASE_YEAR} års penningvärde (tkr)`,
                 data: totalsReal,
                 type: "line",
-                borderColor: "#ff5722",
-                backgroundColor: "#ff5722",
+                borderColor: C().orange,
+                backgroundColor: C().orange,
                 pointRadius: 2,
                 tension: 0.2,
                 fill: false,
@@ -2826,19 +2973,21 @@
           latest.breakdown.aktiviteter,
           latest.breakdown.konferens,
         ];
-        const bdColors = [
-          "#1a237e",
-          "#3949ab",
-          "#7c4dff",
-          "#ff5722",
-          "#ffc107",
-        ];
+        const bdColors = C().slices;
 
         new Chart(document.getElementById("economyBreakdownChart"), {
           type: "doughnut",
           data: {
             labels: bdLabels,
-            datasets: [{ data: bdValues, backgroundColor: bdColors }],
+            datasets: [
+              {
+                data: bdValues,
+                backgroundColor: bdColors,
+                // Kant i kortets färg skiljer sektorerna åt i båda lägena
+                borderColor: C().card,
+                borderWidth: 2,
+              },
+            ],
           },
           options: {
             responsive: true,
@@ -2878,7 +3027,8 @@
                   if (pct < 5) return; // skip tiny slices
                   const { x, y } = arc.tooltipPosition();
                   ctx.save();
-                  ctx.fillStyle = "#fff";
+                  // Vit eller mörk text beroende på vad som kontrasterar mot sektorn
+                  ctx.fillStyle = readableTextOn(bdColors[i]);
                   ctx.font = "bold 12px sans-serif";
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
@@ -3231,6 +3381,8 @@
       Chart.defaults.elements.point.hoverBorderWidth = 3;
       Chart.defaults.elements.bar.hoverBorderWidth = 2;
       Chart.defaults.elements.arc.hoverOffset = 12;
+      // Luft överst så att helskärmsknappen inte täcker data
+      Chart.defaults.layout.padding = { top: 28 };
 
       // Legend: linjeserier visas som en linjebit (streckad om serien är
       // streckad), staplar som fyllda rutor. Linjebiten ritas som en liten
@@ -3321,6 +3473,122 @@
       }
 
       renderAll();
+
+      // ============================================================
+      // HELSKÄRM – grafer och karta kan visas över hela skärmen.
+      // Ett lager med position: fixed (fungerar även på iPhone, som saknar
+      // Fullscreen API för vanliga element). Stängs med knappen, Esc eller
+      // mobilens bakåtgest.
+      // ============================================================
+      const FS_ICON_OPEN =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+      const FS_ICON_CLOSE =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+      let fsOpenEl = null;
+      let fsReturnFocus = null;
+
+      function fsTitle(el) {
+        const section = el.closest(".section");
+        const h2 = section && section.querySelector("h2");
+        return h2 ? h2.textContent.trim() : "Graf";
+      }
+
+      function fsAfterResize(el) {
+        // Rita om i ny storlek direkt i stället för att vänta på att
+        // webbläsaren rapporterar storleksändringen
+        if (el.classList.contains("map-wrap") && mapInstance) {
+          setTimeout(() => mapInstance.invalidateSize(), 50);
+        }
+        // Vid öppning räcker grafen i helskärm. Vid stängning anpassas alla
+        // grafer, eftersom sidans scrollbar var borta medan helskärmen var
+        // öppen och graferna bakom då anpassade sig efter en bredare sida.
+        const canvas = el.querySelector("canvas");
+        const charts = el.classList.contains("fs-open")
+          ? [canvas && Chart.getChart(canvas)].filter(Boolean)
+          : Object.values(Chart.instances);
+        // stop(): pågående (hover-)animation skulle annars skjuta upp resize.
+        // Andra omgången fångar sena storleksbesked från Chart.js egen
+        // ResizeObserver, som annars kan ge grafen helskärmsbredden kvar.
+        const fit = () =>
+          charts.forEach((chart) => {
+            chart.stop();
+            chart.resize();
+          });
+        requestAnimationFrame(fit);
+        setTimeout(fit, 300);
+      }
+
+      function fsOpen(el, btn) {
+        if (fsOpenEl) return;
+        fsOpenEl = el;
+        fsReturnFocus = btn;
+        el.dataset.fsTitle = fsTitle(el);
+        el.classList.add("fs-open");
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-modal", "true");
+        el.setAttribute("aria-label", el.dataset.fsTitle);
+        document.body.classList.add("fs-lock");
+        btn.innerHTML = FS_ICON_CLOSE;
+        btn.setAttribute("aria-label", "Stäng helskärm");
+        btn.title = "Stäng helskärm (Esc)";
+        btn.focus();
+        // Bakåtgesten på mobil ska stänga helskärmen, inte lämna sidan
+        history.pushState({ fullscreen: true }, "");
+        fsAfterResize(el);
+      }
+
+      function fsClose() {
+        const el = fsOpenEl;
+        if (!el) return;
+        fsOpenEl = null;
+        el.classList.remove("fs-open");
+        el.removeAttribute("role");
+        el.removeAttribute("aria-modal");
+        el.removeAttribute("aria-label");
+        document.body.classList.remove("fs-lock");
+        const btn = el.querySelector(":scope > .fs-btn");
+        btn.innerHTML = FS_ICON_OPEN;
+        btn.setAttribute(
+          "aria-label",
+          `Visa i helskärm: ${el.dataset.fsTitle}`,
+        );
+        btn.title = "Visa i helskärm";
+        fsAfterResize(el);
+        if (fsReturnFocus) fsReturnFocus.focus();
+      }
+
+      // Stäng via historiken så att bakåtsteget från fsOpen förbrukas
+      function fsRequestClose() {
+        if (history.state && history.state.fullscreen) history.back();
+        else fsClose();
+      }
+
+      function setupFullscreen() {
+        document
+          .querySelectorAll(".chart-container, .map-wrap")
+          .forEach((el) => {
+            if (el.querySelector(":scope > .fs-btn")) return;
+            if (!el.querySelector("canvas, #map")) return;
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "fs-btn";
+            btn.innerHTML = FS_ICON_OPEN;
+            btn.title = "Visa i helskärm";
+            btn.setAttribute("aria-label", `Visa i helskärm: ${fsTitle(el)}`);
+            btn.addEventListener("click", () =>
+              fsOpenEl === el ? fsRequestClose() : fsOpen(el, btn),
+            );
+            el.appendChild(btn);
+          });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && fsOpenEl) fsRequestClose();
+        });
+        window.addEventListener("popstate", () => {
+          if (fsOpenEl) fsClose();
+        });
+      }
+
+      setupFullscreen();
 
       // Footer: datum då sidan senast ändrades + senaste år med komplett data
       const lastDataYear = DATA.filter(
